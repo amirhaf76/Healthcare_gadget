@@ -107,12 +107,12 @@ enum Controller {
     /** Number of controllers should be
      * matched with Macro CONTROLLERS_NUMBERS.
      */
-    MAX30102_,
-    MAX30205_, 
+    HRB_OX_MODULE,
+    TEMPERATURE_MODULE, 
     KY_039_, 
-    ADXL_325_, 
-    SD_, 
-    AD8232_,
+    Accelerator_Meter, 
+    SD_MODULE, 
+    ECHO_CARDIO_MODULE,
     None
 };
 

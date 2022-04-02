@@ -40,7 +40,7 @@
  * Module 	| Arduino Board
  * vcc 		| 3.3 v
  * GND 		| ground
- * CS		| 13
+ * CS		  | 13
  * MOSI		| MOSI = 12
  * MISO		| MISO = 11
  * SLK		| 10
@@ -54,10 +54,11 @@
 
 #include <Wire.h>
 #include "Protocentral_MAX30205.h"
-#include "MAX30105.h"
 #include "health_helper.h"
 #include <SPI.h>
 #include <SD.h>
+#include "MAX30105.h"
+#include "heartRate.h"
 
 
 /* Gadget ID*/
@@ -66,116 +67,127 @@
 
 // It is for debugging program.
 #define DEBUG 1 
+#define SERIAL_LOG 1
 
 
 /* Declaration Part */
+void logger(char *);
 
 // Setup Functions 
-void MAX30102_setup(); // ok
-void MAX30205_setup(); // ok
-void KY_039_setup(); // ok
-void ADXL_325_setup(); // ok
+void HRB_OX_module_setup(); // ok
+void Temperature_module_setup(); // ok
+void Accelerator_Meter_setup(); // ok
 //void SD_setup();
-void AD8232_setup(); // ok
+void Echo_cardio_module_setup(); // ok
 
 // Loop Step Functions
-void MAX30102_loop_step();  // ok
-void MAX30205_loop_step(); // ok
-void KY_039_loop_step(); // ok
-void ADXL_325_loop_step(); // ok
+void HRB_OX_module_loop_step();  // ok
+void Temperature_module_loop_step(); // ok
+void Accelerator_Meter_loop_step(); // ok
 //void SD_loop_step();
-void AD8232_loop_step(); // ok
+void Echo_cardio_module_loop_step(); // ok
 
 
 /* Global Variables */
 
-// MAX30102
-MAX30105 particleSensor; // initialize MAX30102 with I2C
-// MAX30205
-MAX30205 tempSensor;
 enum Controller c = None;
-// KY-039
-const int NUM_POINTs = 50;
-double data[NUM_POINTs];
-int counter;
-double mean;
-int beat;
-int brt;
-unsigned long temp_time;
-int KY_INPUT = A0;
-// ADXL_325
-Point p;
-const int xpin = A0;                  // x-axis of the accelerometer
-const int ypin = A1;                  // y-axis
-const int zpin = A2;                  // z-axis (only on 3-axis models)
-const int CF = 1;
-// AD8232
-const int LO_PLUS = 10;
-const int LO_NEG = 11;
+#define PIN_ECHO_CONTROLLER 7
+#define PIN_BODY_TEMP_CONTROLLER 6
+#define PIN_HRB_OX_CONTROLLER 5
+#define ECHO_CARDIO_TIME 5000
+#define BODY_TEMP_TIME 5000
+#define HRB_OX_TIME 5000
 
+// HRB_OX_module
+MAX30105 particleSensor;
+
+const byte RATE_SIZE = 4; //Increase this for more averaging. 4 is good.
+byte rates[RATE_SIZE]; //Array of heart rates
+byte rateSpot = 0;
+long lastBeat = 0; //Time at which the last beat occurred
+
+float beatsPerMinute;
+int beatAvg;
+
+// Temperature_module
+MAX30205 tempSensor;
+// Accelerator_Meter
+Point p;
+const int xpin = A1;                  // x-axis of the accelerometer
+const int ypin = A2;                  // y-axis
+const int zpin = A3;                  // z-axis (only on 3-axis models)
+const int CF = 1;
+long unsigned steps = 0;
+// Echo_cardio_module
+#define LO_PLUS 2
+#define LO_NEG  3
+// SD 
+#define CS 13
+#define MOSI 12
+#define MISO 11
+#define SLK	10
+
+void logger(char * message) {
+  #if SERIAL_LOG
+    Serial.println(message);
+  #else
+
+  #endif
+}
 
 /* Stepup Declarations */
-void ADXL_325_setup() {
+void Accelerator_Meter_setup() {
   p.x = analogRead(xpin);
   p.y = analogRead(ypin);
   p.z = analogRead(zpin);
 }
 
 
-void MAX30205_setup() {
-  Wire.begin();
+void Temperature_module_setup() {
+  logger("Initializing...");
+  short counter = 0;
 
   //scan for temperature in every 30 sec untill a sensor is found. Scan for both addresses 0x48 and 0x49
   while(!tempSensor.scanAvailableSensors()){
- 	Serial.println("Couldn't find the temperature sensor, please connect the sensor." );
-	delay(30000);
+    if ( (counter++) == 3)
+      return ;
+    logger("Couldn't find the temperature sensor, please connect the sensor." );
+    delay(5000);
   }
 
   tempSensor.begin();   // set continuos mode, active mode
 }
 
 
-void AD8232_setup() {
+void Echo_cardio_module_setup() {
   pinMode(LO_PLUS, INPUT); // Setup for leads off detection LO +
   pinMode(LO_NEG, INPUT); // Setup for leads off detection LO -
 }
 
-void KY_039_setup() {
-  counter = 0;
-  beat = 0;
-  brt = 0;
-  temp_time = millis();
-  mean = analogRead(A0);
-}
+void HRB_OX_module_setup() {
+  logger("Initializing...");
+  short counter = 0;
 
-void MAX30102_setup() {
-  // Serial.begin(115200);
-  while(!Serial); //We must wait for Teensy to come online
-  delay(100);
-  Serial.println("");
-  Serial.println("MAX30102");
-  Serial.println("");
-  delay(100);
   // Initialize sensor
-  if (particleSensor.begin(Wire, I2C_SPEED_FAST) == false) //Use default I2C port, 400kHz speed
-  {
-    Serial.println("MAX30105 was not found. Please check wiring/power. ");
-    while (1);
+  while (!particleSensor.begin(Wire, I2C_SPEED_FAST)) {
+    if ((counter++) == 3) 
+      return ;
+
+    logger("HRB_OX_module was not found. Please check wiring/power. ");
+
+    delay(3000);
   }
 
-  byte ledBrightness = 70; //Options: 0=Off to 255=50mA
-  byte sampleAverage = 1; //Options: 1, 2, 4, 8, 16, 32
-  byte ledMode = 2; //Options: 1 = Red only, 2 = Red + IR, 3 = Red + IR + Green
-  int sampleRate = 400; //Options: 50, 100, 200, 400, 800, 1000, 1600, 3200
-  int pulseWidth = 69; //Options: 69, 118, 215, 411
-  int adcRange = 16384; //Options: 2048, 4096, 8192, 16384
+  logger("Place your index finger on the sensor with steady pressure.");
 
-  particleSensor.setup(ledBrightness, sampleAverage, ledMode, sampleRate, pulseWidth, adcRange); //Configure sensor with these settings
+  particleSensor.setup(); //Configure sensor with default settings
+  particleSensor.setPulseAmplitudeRed(0x0A); //Turn Red LED to low to indicate sensor is running
+  particleSensor.setPulseAmplitudeGreen(0); //Turn off Green LED
 }
 
 
 /* Loop Step Declarations */
-void ADXL_325_loop_step() {
+void Accelerator_Meter_loop_step() {
 
   Point temp;
   temp.x = analogRead(xpin);
@@ -188,15 +200,25 @@ void ADXL_325_loop_step() {
   diff.z = temp.z - p.z;
 
   double res = magnitude_calculated(diff);
-  Serial.print(noiseFilter(res, CF));
-  p.x = temp.x;
-  p.y = temp.y;
-  p.z = temp.z;
 
-  delay(100); // ?. it should be checked.
+  // Serial.print(noiseFilter(res, CF));
+  int result = noiseFilter(res, CF);
+
+  p = temp;
+ 
+  if (12 <=result && result <= 15){
+    ++steps;
+    Serial.print(res);
+  }
+  else {
+    Serial.print(0);
+  }
+
+  // delay before next reading:
+  delay(100);
 }
  
-void MAX30205_loop_step() {
+void Temperature_module_loop_step() {
 
   float temp = tempSensor.getTemperature(); // read temperature for every 100ms
   Serial.print(temp ,2);
@@ -205,99 +227,130 @@ void MAX30205_loop_step() {
   delay(100);
 }
 
-void AD8232_loop_step() {
+void Echo_cardio_module_loop_step() {
  
   if((digitalRead(LO_NEG) == 1)||(digitalRead(LO_PLUS) == 1)){
-    Serial.println('!');
+    logger('!');
   }
   else{
-  // send the value of analog input 0:
-  Serial.println(analogRead(A0));
+    // send the value of analog input 0:
+    logger(analogRead(A0));
   }
-
   delay(1);
 }
 
-void KY_039_loop_step() {
-  double pulse;
-  int sum = 0;
-  
-  for (int i = 0; i < 20; ++i){
-    sum += analogRead(KY_INPUT);
+void HRB_OX_module_loop_step() {
+  long irValue = particleSensor.getIR();
+
+  if (checkForBeat(irValue) == true) {
+    //We sensed a beat!
+    long delta = millis() - lastBeat;
+    lastBeat = millis();
+
+    beatsPerMinute = 60 / (delta / 1000.0);
+
+    if (beatsPerMinute < 255 && beatsPerMinute > 20) {
+      rates[rateSpot++] = (byte)beatsPerMinute; //Store this reading in the array
+      rateSpot %= RATE_SIZE; //Wrap variable
+
+      //Take average of readings
+      beatAvg = 0;
+      for (byte x = 0 ; x < RATE_SIZE ; x++)
+        beatAvg += rates[x];
+      beatAvg /= RATE_SIZE;
+    }
   }
+
+  Serial.print("IR=");
+  Serial.print(irValue);
+  Serial.print(", BPM=");
+  Serial.print(beatsPerMinute);
+  Serial.print(", Avg BPM=");
+  Serial.print(beatAvg);
+
+  if (irValue < 50000)
+    Serial.print(" No finger?");
+
+  Serial.println();      
   
-  pulse = sum/ 20.00;
-
-  data[counter++] = pulse;
-  Serial.print("Pulse:");
-  Serial.print(pulse);
-  Serial.print("\t");
-
-  if (counter == NUM_POINTs) {
-    mean = calculate_mean(NUM_POINTs, data, nullptr);
-    beat = find_local_max(NUM_POINTs, data, mean);
-    
-    int t = (millis() - temp_time)/1000;
-    brt = (beat * 60) / t;
-    temp_time = millis();
-    
-    Serial.print("mean:");
-    Serial.print(mean);
-    Serial.print("\t");
-    
-    Serial.print("beat:");
-    Serial.print(beat);
-    Serial.print("\t");
-    
-    Serial.print("brt:");
-    Serial.print(brt);
-    Serial.print("\t");
-    
-    Serial.print("time:");
-    Serial.print(t);
-    Serial.print("\t");
-    Serial.print("****************");
-  } 
-    
-  Serial.println();
-
-  counter %= NUM_POINTs;
-  
-  delay(100);// wait for a second
 }
 
-void MAX30102_loop_step() {
-  particleSensor.check(); //Check the sensor
-  while (particleSensor.available()) {
-      // read stored IR
-      Serial.print(particleSensor.getFIFOIR());
-      Serial.print(",");
-      // read stored red
-      Serial.println(particleSensor.getFIFORed());
-      // read next set of samples
-      particleSensor.nextSample();      
-  }
-}
+void switch_module(enum Controller c) {
 
+  digitalWrite(PIN_HRB_OX_CONTROLLER, LOW);
+  digitalWrite(PIN_BODY_TEMP_CONTROLLER, LOW);
+  digitalWrite(PIN_ECHO_CONTROLLER, LOW);
+
+  delay(2000);
+
+  switch(c) {
+    case HRB_OX_MODULE:
+      digitalWrite(PIN_HRB_OX_CONTROLLER, HIGH);
+      break;
+    case TEMPERATURE_MODULE:
+      digitalWrite(PIN_BODY_TEMP_CONTROLLER, HIGH);
+      break;
+    case ECHO_CARDIO_MODULE:
+      digitalWrite(PIN_ECHO_CONTROLLER, HIGH);
+      break;
+    default:
+      Serial.print("Error. It needs to see codes. Line: ");
+      Serial.print(__LINE__);
+      Serial.print(", File: ");
+      Serial.println(__FILE__);
+      break;
+  }
+  
+  delay(3000);
+}
 
 // change 
 void change(enum Controller c) {
-  
+  Serial.println("3 s to change.");
+  delay(1000);
+  Serial.println("2 s to change.");
+  delay(1000);
+  Serial.println("1 s to change.");
+  delay(1000);
 }
+
 // Setup
 void setup() {
+
 	Serial.begin(9600);
-	// pinMode(A0, INPUT); //? ky-039
+  Wire.begin();
 
-	#if !DEBUG
-	MAX30102_setup();
-	MAX30205_setup(); 
-	KY_039_setup();
-	ADXL_325_setup(); //
-	//  SD_setup();
-	AD8232_setup();
-	#endif
+  Accelerator_Meter_setup()
 
+  c =  Controller.None; 
+
+}
+
+void do_loop(enum Controller c) {
+  unsigned long myTime = millis();
+  
+  switch(c) {
+    case HRB_OX_MODULE:
+      while (millis - myTime < HRB_OX_TIME)
+      {
+        HRB_OX_module_loop_step();
+      }
+      break;
+    case TEMPERATURE_MODULE:
+      while (millis - myTime < BODY_TEMP_TIME)
+      {
+        Temperature_module_loop_step();
+      }
+      break;
+    case ECHO_CARDIO_MODULE:
+      while (millis - myTime < ECHO_CARDIO_TIME)
+      {
+        Echo_cardio_module_loop_step();
+      }
+      break;
+    default:
+      break;
+  }
 }
 
 
@@ -308,71 +361,18 @@ void loop() {
     int temp = Serial.parseInt();
     if (temp >= 0 && temp < CONTROLLERS_NUMBERS) {
       c = (enum Controller)temp;
+      change(c);
+      switch_module(c);
     }
   }
 
-  switch (c)
-  {
-    case MAX30102_: 
-      #if DEBUG
-        Serial.print("MAX30102_");
-      #else
-        MAX30102_loop_step();
-      #endif
-      break;
-    case MAX30205_:
-      #if DEBUG
-      Serial.print("MAX30205_");
-      #else
-      MAX30205_loop_step();
-      #endif 
-      break;
-    case KY_039_: 
-      #if DEBUG
-      Serial.print("KY_039_");
-      #else
-      KY_039_loop_step();
-      #endif
-      break;
-    case ADXL_325_: 
-        #if DEBUG
-      Serial.print("ADXL_325_");
-      #else
-      ADXL_325_loop_step();
-      #endif
-      break;
-    case SD_: 
-      #if DEBUG
-      Serial.print("SD_");
-      #else
-//      SD_loop_step();
-      #endif
-      break;
-    case AD8232_: 
-      #if DEBUG
-      Serial.print("AD8232_");
-      #else
-      AD8232_loop_step();
-      #endif
-      break;
-    case None: 
-      #if DEBUG
-      Serial.print("None");
-      #else
-      #endif
-      break;
-    default:
-      Serial.print("Error. It needs to see codes.");
-  }
+  Accelerator_Meter_loop_step();
+
 }
 
 bool make_file_ready() {
   #if DEBUG
   // Open serial communications and wait for port to open:
-  Serial.begin(9600);
-  while (!Serial) {
-    ; // wait for serial port to connect. Needed for native USB port only
-  }
   Serial.print("Initializing SD card...");
   #endif
 
@@ -413,12 +413,18 @@ bool write_in_file(int len, char buff[]) {
   } else {
     // if the file didn't open, print an error:
     #if DEBUG
-    Serial.println("error opening test.txt");
+    Serial.print("error opening ");
+    Serial.print(FILE_RECORDS);
+    Serial.println(" file");
     #endif
   }
 }
 
 void read_from_file(int len, char buff[]) {
+  // making file ready
+  if (!make_file_ready()) 
+    return false; // file is not ready and return
+
   // re-open the file for reading:
   File myFile = SD.open(FILE_RECORDS);
 
