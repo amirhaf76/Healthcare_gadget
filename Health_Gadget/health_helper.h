@@ -1,5 +1,5 @@
-#ifndef HEALTH_HELPER
-#define HEALTH_HELPER
+#ifndef HEALTH_HELPER_h
+#define HEALTH_HELPER_h
 #include <math.h>
 #include <stdlib.h>
 
@@ -14,7 +14,6 @@ typedef struct {
  * x: input
 */
 int noiseFilter(double x,float cf);
-
 double magnitude_calculated(Point p);
 double calculate_mean(const int siz, const double arr[], int* err);
 int find_local_max(const int siz, const double arr[], double min_value);
@@ -33,7 +32,8 @@ double magnitude_calculated(Point p) {
  * x: input
 */
 int noiseFilter(double x,float cf) {
-  if (abs(x) < cf *10) return 0;
+  if (abs(x) < cf *10) 
+    return 0;
 
   return x;
 }
@@ -110,9 +110,9 @@ enum Controller {
     HRB_OX_MODULE,
     TEMPERATURE_MODULE, 
     KY_039_, 
-    Accelerator_Meter, 
+    ACCELEROMETER_MODULE, 
     SD_MODULE, 
-    ECHO_CARDIO_MODULE,
+    ECHOCARDIOGRAM_MODULE,
     None
 };
 
