@@ -103,28 +103,26 @@ float beatsPerMinute;
 int beatAvg;
 
 // HRB OX
-//int32_t bufferLength; //data length
-//int32_t spo2; //SPO2 value
-//int8_t validSPO2; //indicator to show if the SPO2 calculation is valid
-//int32_t heartRate; //heart rate value
-//int8_t validHeartRate; //indicator to show if the heart rate calculation is valid
-//uint16_t irBuffer[50]; //infrared LED sensor data
-//uint16_t redBuffer[50];  //red LED sensor data
+int32_t bufferLength; //data length
+int32_t spo2; //SPO2 value
+int8_t validSPO2; //indicator to show if the SPO2 calculation is valid
+int32_t heartRate; //heart rate value
+int8_t validHeartRate; //indicator to show if the heart rate calculation is valid
+uint16_t irBuffer[50]; //infrared LED sensor data
+uint16_t redBuffer[50];  //red LED sensor data
 // end hrb ox
 
 // Temperature_module
 MAX30205 tempSensor;
 
 // ACCELEROMETER_MODULE
-Point p;
+Point current_point;
 const int xpin = A1;                  // x-axis of the accelerometer
 const int ypin = A2;                  // y-axis
 const int zpin = A3;                  // z-axis (only on 3-axis models)
 const int CF = 1;
 
-// Results
-long unsigned steps = 0;
-float temperature = 0;
+
 
 /* Declaration Part */
 void logger(char *);
@@ -158,9 +156,9 @@ void Accelerometer_Meter_setup() {
   #if DEBUG
   Serial.println("Initializing Accelerometer...");
   #endif
-  p.x = analogRead(xpin);
-  p.y = analogRead(ypin);
-  p.z = analogRead(zpin);
+  current_point.x = analogRead(xpin);
+  current_point.y = analogRead(ypin);
+  current_point.z = analogRead(zpin);
 }
 
 
@@ -204,7 +202,7 @@ void HRB_OX_module_setup() {
 
   // Initialize sensor
   while (!particleSensor.begin(Wire, I2C_SPEED_FAST)) {
-    if ((counter++) == 3) 
+    if ((++counter) == 3) 
       return ;
 
     #if DEBUG
@@ -247,16 +245,34 @@ void Accelerometer_loop_step() {
   temporary_point.z = analogRead(zpin);
 
   Point diff;
-  diff.x = temporary_point.x - p.x;
-  diff.y = temporary_point.y - p.y;
-  diff.z = temporary_point.z - p.z;
+  diff.x = temporary_point.x - current_point.x;
+  diff.y = temporary_point.y - current_point.y;
+  diff.z = temporary_point.z - current_point.z;
 
   int result = noiseFilter(magnitude_calculated(diff), CF);
 
-  p = temporary_point;
- 
-  if (12 <=result && result <= 15)
+  current_point = temporary_point;
+
+  #if DEBUG
+  Serial.print("s:");
+  if (bandWithFilter(result, 18, 30)) {
     ++steps;
+    
+    Serial.print(result);
+  } else {
+    Serial.print(0);
+  }
+    
+  Serial.print(", r:");
+  Serial.print(result);
+  Serial.println();
+  #else
+  if (bandWithFilter(result, 18, 30))
+    ++steps;
+  #endif
+
+
+  
 
   delay(100);
 }
@@ -334,13 +350,6 @@ void HRB_OX_module_loop_step() {
 //  Serial.println();      
   
   //
-  int32_t bufferLength; //data length
-int32_t spo2; //SPO2 value
-int8_t validSPO2; //indicator to show if the SPO2 calculation is valid
-int32_t heartRate; //heart rate value
-int8_t validHeartRate; //indicator to show if the heart rate calculation is valid
-uint16_t irBuffer[50]; //infrared LED sensor data
-uint16_t redBuffer[50];  //red LED sensor data
 
   bufferLength = 100; //buffer length of 100 stores 4 seconds of samples running at 25sps
 
