@@ -14,7 +14,7 @@ double magnitude_calculated(Point p) {
  * x: input
 */
 double noiseFilter(double x,float cf) {
-  if ( fabs(x) < cf *10) 
+  if (fabs(x) < cf *10) 
     return 0.0;
 
   return x;

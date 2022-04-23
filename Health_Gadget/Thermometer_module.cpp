@@ -9,7 +9,6 @@
 static MAX30205 THERMOMETER_SENSOR;
 static int g_temperature = 0;
 
-
 /* Implimentation */
 void Thermometer_module_setup()
 {

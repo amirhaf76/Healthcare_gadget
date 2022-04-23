@@ -1,5 +1,6 @@
 #include "health_helper.h"
 #include "Accelerometer_module.h"
+#include "Arduino.h"
 
 #define DEBUG_ACCELEROMETER 1
 
@@ -12,7 +13,7 @@ int CF = 1;
 long unsigned steps;
 
 /* Stepup Declarations */
-void Accelerometer_Meter_setup(int xpin, int ypin, int zpin)
+void Accelerometer_setup(int xpin, int ypin, int zpin)
 {
     g_xpin = xpin;
     g_ypin = ypin;
