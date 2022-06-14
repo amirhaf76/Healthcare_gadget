@@ -52,17 +52,18 @@
 
 
 #include <Wire.h>
-// #include "Protocentral_MAX30205.h"
+#include "Protocentral_MAX30205.h"
 #include "health_helper.h"
 #include "Arduino.h"
 #include "Thermometer_module.h"
 #include "Echocardiogram_module.h"
 #include "Accelerometer_module.h"
-// #include <SPI.h>
-// #include <SD.h>
-// #include "MAX30105.h"
-// #include "heartRate.h"
-// #include "spo2_algorithm.h"
+#include <SoftwareSerial.h>
+#include <SPI.h>
+#include <SD.h>
+#include "MAX30105.h"
+#include "heartRate.h"
+#include "spo2_algorithm.h"
 
 
 /* Gadget ID*/
@@ -92,6 +93,10 @@
 #define MOSI 11
 #define MISO 12
 #define SLK	13
+
+int XPIN = A1;
+int YPIN = A2;
+int ZPIN = A3;
 
 enum Controller c = None;
 
@@ -232,7 +237,7 @@ void setup() {
 	Serial.begin(9600);
   Wire.begin();
 
-  Accelerometer_Meter_setup(xpin, ypin, zpin);
+  Accelerometer_setup(XPIN, YPIN, ZPIN);
 
   c =  None; 
 
