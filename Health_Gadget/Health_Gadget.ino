@@ -59,19 +59,8 @@
  * 
 */
 
-
-// #include <Wire.h>
-// #include "Arduino.h"
-// #include <SoftwareSerial.h>
-
-// #include <SPI.h>
-// #include <SD.h>
-
-// #include "MAX30105.h"
-
-// #include "spo2_algorithm.h"
-
 #include <LiquidCrystal.h>
+
 
 #include "health_helper.h"
 #include "Echocardiogram_module.h"
@@ -80,7 +69,7 @@
 #include "SD_module.h"
 #include "HRB_OX_module.h"
 
-/* Gadget ID*/
+/* Gadget ID */
 #define ID_GADGET 0xf2
 
 
@@ -101,6 +90,11 @@
 // Echo_cardio_module
 #define LO_PLUS 2
 #define LO_NEG  3
+
+// Buttons
+#define SELECT_BUTTON 6
+#define LEFT_BUTTON 5
+#define RIGHT_BUTTON 4
 
 // SD 
 #define CS 10
@@ -133,7 +127,7 @@ void switch_module(enum Controller c) {
   digitalWrite(PIN_HRB_OX_CONTROLLER, LOW);
   digitalWrite(PIN_BODY_TEMP_CONTROLLER, LOW);
   digitalWrite(PIN_ECHO_CONTROLLER, LOW);
-
+  
   #if DEBUG
   Serial.println("OFF all module in 2s");
   #endif
@@ -247,13 +241,14 @@ void run_module(enum Controller c) {
 void setup() {
 
 	Serial.begin(9600);
-
   lcd_setup();
-
   Accelerometer_setup(XPIN, YPIN, ZPIN);
 
-  c =  None; 
+	pinMode(SELECT_BUTTON, INPUT);
+	pinMode(LEFT_BUTTON, INPUT);
+	pinMode(RIGHT_BUTTON, INPUT);
 
+  c =  None; 
 }
 
 // Loop
@@ -289,3 +284,14 @@ void loop() {
 void lcd_setup() {
     lcd.begin(16, 2);
 }
+
+void lcd_controller(int a) {
+}
+/* todo: 
+	control
+	GPS,
+	sending data, 
+	Database, 
+	saving data for no connection, 
+	test, 
+*/
