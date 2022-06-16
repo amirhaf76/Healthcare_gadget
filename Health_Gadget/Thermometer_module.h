@@ -1,5 +1,5 @@
-#ifndef THERMOMETER_MODULE_H
-#define THERMOMETER_MODULE_H
+#ifndef __THERMOMETER_MODULE_H__
+#define __THERMOMETER_MODULE_H__
 
 /* Declarations */
 void Thermometer_module_setup();

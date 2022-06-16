@@ -1,6 +1,5 @@
 #include <Wire.h>
 #include "Protocentral_MAX30205.h"
-#include "Thermometer_module.h"
 #include "Arduino.h"
 
 #define DEBUG_THERMOMETER_MODULE 0

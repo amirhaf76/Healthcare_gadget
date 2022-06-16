@@ -3,15 +3,15 @@
  * Module 	| Arduino Board
  * vcc 		  | 5v or 3.3 v
  * GND 		  | ground
- * SDA		  | A4 or SDA
- * SCL		  | A5 or SCL
+ * SDA		  | 20 or SDA
+ * SCL		  | 21 or SCL
  * 
  * MAX30102 as Oxi meter:
  * Module 	| Arduino Board
  * vcc 	  	| 3.3 v
  * GND   		| ground
- * SDA		  | SDA or A4
- * SCL		  | SCL or A5
+ * SDA		  | SDA or 20
+ * SCL		  | SCL or 21
  * 
  * ADXL325 as Accelerator Meter:
  * Module 	| Arduino Board
@@ -21,12 +21,6 @@
  * y		    | A2
  * z	    	| A3
  * 
- * KY-039 as Heartbeat Radio Sensor: <It was Canceled.>
- * Module 	| Arduino Board
- * vcc 		  | 5 v
- * GND 		  | ground
- * output	  | A0
- * 
  * AD8232 as Echocardiography:
  * Module 	| Arduino Board
  * vcc 		  | 3.3 v
@@ -34,16 +28,31 @@
  * output	  | A0
  * LO+		  | 2
  * LO-		  | 3
- * SDN		  | from controller pin 7
+ * SDN		  | from controller pin 22
  * 
  * SD Module:
  * Module 	| Arduino Board
  * vcc 		  | 3.3 v
  * GND 	  	| ground
- * CS		    | 10
- * MOSI	  	| MOSI = 11
- * MISO	  	| MISO = 12
- * SLK	  	| 13
+ * CS		    | 53
+ * MOSI	  	| MOSI = 51
+ * MISO	  	| MISO = 50
+ * SCK	  	| 52
+ * 
+ * Liquid Cristal:
+ * Name     | Pin
+ * VSS      | Ground
+ * VCC      | 5V
+ * RS       | 31
+ * Enable   | 33
+ * R/W      | Ground
+ * V0       | Potentiometer
+ * D4       | 23
+ * D5       | 25
+ * D6       | 27
+ * D7       | 29
+ * LED+     | 5V
+ * LED-     | Ground
  * 
  * Transistor Controller:
  * ...
@@ -51,24 +60,29 @@
 */
 
 
-#include <Wire.h>
-#include "Protocentral_MAX30205.h"
-#include "health_helper.h"
-#include "Arduino.h"
-#include "Thermometer_module.h"
-#include "Echocardiogram_module.h"
-#include "Accelerometer_module.h"
-#include <SoftwareSerial.h>
-#include <SPI.h>
-#include <SD.h>
-#include "MAX30105.h"
-#include "heartRate.h"
-#include "spo2_algorithm.h"
+// #include <Wire.h>
+// #include "Arduino.h"
+// #include <SoftwareSerial.h>
 
+// #include <SPI.h>
+// #include <SD.h>
+
+// #include "MAX30105.h"
+
+// #include "spo2_algorithm.h"
+
+#include <LiquidCrystal.h>
+
+#include "health_helper.h"
+#include "Echocardiogram_module.h"
+#include "Thermometer_module.h"
+#include "Accelerometer_module.h"
+#include "SD_module.h"
+#include "HRB_OX_module.h"
 
 /* Gadget ID*/
 #define ID_GADGET 0xf2
-#define FILE_RECORDS "records"
+
 
 // It is for debugging program.
 #define DEBUG 0
@@ -94,24 +108,22 @@
 #define MISO 12
 #define SLK	13
 
+// LCD 
+#define D4 23
+#define D5 25
+#define D6 27
+#define D7 29
+#define RS 31
+#define LCD_EN 33
+
 int XPIN = A1;
 int YPIN = A2;
 int ZPIN = A3;
 
+
+LiquidCrystal lcd(RS, LCD_EN, D4, D5, D6, D7);
+
 enum Controller c = None;
-
-/* Declaration Part */
-void logger(char *);
-
-void logger(char * message) {
-  #if SERIAL_LOG
-    Serial.println(message);
-  #else
-
-  #endif
-}
-
-/* Stepup Declarations */
 
 
 
@@ -225,8 +237,8 @@ void run_module(enum Controller c) {
       create_csv_file(storageRes, index);
       break;
 
-    default:
-      break;
+    //default:
+      
   }
 
 }
@@ -235,7 +247,8 @@ void run_module(enum Controller c) {
 void setup() {
 
 	Serial.begin(9600);
-  Wire.begin();
+
+  lcd_setup();
 
   Accelerometer_setup(XPIN, YPIN, ZPIN);
 
@@ -273,126 +286,6 @@ void loop() {
   
 }
 
-bool make_file_ready() {
-  #if DEBUG
-  // Open serial communications and wait for port to open:
-  Serial.print("Initializing SD card...");
-  #endif
-
-  if (!SD.begin(4)) {
-    #if DEBUG
-    Serial.println("initialization failed!");
-    #endif
-    return false;
-  }
-  #if DEBUG
-  Serial.println("initialization done.");
-  #endif
-
-  return true;
-}
-
-bool print_in_file(uint8_t val) {
-  // making file ready
-  if (!make_file_ready()) 
-    return false; // file is not ready and return
-
-  File myFile = SD.open(FILE_RECORDS, FILE_WRITE);
-
-  // if the file opened okay, write to it:
-  if (myFile) {
-    #if DEBUG
-    Serial.print("Writing to test.txt...");
-    #endif
-    
-    myFile.print(val);
-
-    // close the file:
-    myFile.close();
-
-    #if DEBUG
-    Serial.println("done.");
-    #endif
-
-    return true;
-  } else {
-    // if the file didn't open, print an error:
-    #if DEBUG
-    Serial.print("error opening ");
-    Serial.print(FILE_RECORDS);
-    Serial.println(" file");
-    #endif
-
-    return false;
-  }
-}
-
-bool create_csv_file(const int buff[], size_t siz) {
-  // making file ready
-  if (!make_file_ready()) 
-    return false; // file is not ready and return
-
-  File myFile = SD.open("myFile.csv", FILE_WRITE);
-
-  // if the file opened okay, write to it:
-  if (myFile) {
-    #if DEBUG
-    Serial.print("Writing to test.txt...");
-    #endif
-    
-    for (size_t i = 0; i < siz; ++i)
-      myFile.println(val);
-
-    // close the file:
-    myFile.close();
-
-    #if DEBUG
-    Serial.println("done.");
-    #endif
-
-    return true;
-  } else {
-    // if the file didn't open, print an error:
-    #if DEBUG
-    Serial.print("error opening ");
-    Serial.print(FILE_RECORDS);
-    Serial.println(" file");
-    #endif
-
-    return false;
-  }
-}
-
-bool read_from_file() {
-  // making file ready
-  if (!make_file_ready()) 
-    return false; // file is not ready and return
-
-  // re-open the file for reading:
-
-  File myFile = SD.open(FILE_RECORDS, FILE_READ);
-
-  if (myFile) {
-    #if DEBUG
-    Serial.println(FILE_RECORDS);
-    #endif
-
-    // read from the file until there's nothing else in it:
-    while (myFile.available()) {
-      Serial.write(myFile.read());
-    }
-
-    // close the file:
-    myFile.close();
-
-    return true;
-  } else {
-    // if the file didn't open, print an error:
-    #if DEBUG
-    Serial.println("error opening test.txt");
-    #endif
-
-    return false;
-  }
-
+void lcd_setup() {
+    lcd.begin(16, 2);
 }

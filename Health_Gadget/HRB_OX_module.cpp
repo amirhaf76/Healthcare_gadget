@@ -4,6 +4,7 @@
 #include <Wire.h>
 #include "MAX30105.h"
 #include "spo2_algorithm.h"
+#include "heartRate.h"
 
 
 float beatsPerMinute;
