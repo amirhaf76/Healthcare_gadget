@@ -163,6 +163,10 @@ void switch_module(enum Controller c) {
       
       #if DEBUG
       Serial.println("HRB_OX_MODULE On");
+      lcd.clear();
+      lcd.print("HRB_OX");
+      lcd.setCursor(0, 1);
+      lcd.print("is on");
       #endif
 
       break;
@@ -172,6 +176,10 @@ void switch_module(enum Controller c) {
 
       #if DEBUG
       Serial.println("TEMPERATURE_MODULE On");
+      lcd.clear();
+      lcd.print("TEMPERATURE");
+      lcd.setCursor(0, 1);
+      lcd.print("is on");
       #endif
 
       break;
@@ -181,6 +189,10 @@ void switch_module(enum Controller c) {
 
       #if DEBUG
       Serial.println("ECHOCARDIOGRAM_MODULE On");
+      lcd.clear();
+      lcd.print("ECHOCARDIOGRAM");
+      lcd.setCursor(0, 1);
+      lcd.print("is on");
       #endif  
 
       break;
@@ -189,6 +201,9 @@ void switch_module(enum Controller c) {
 
       #if DEBUG
       Serial.println("None On");
+      lcd.clear();
+      lcd.print("Nothing ");
+      lcd.print("is on");
       #endif
 
       break;
@@ -220,6 +235,8 @@ void change(enum Controller c) {
 
   delay(1000);
   }
+  lcd.clear();
+  lcd.print("Preparing ...");
 
 }
 
@@ -237,7 +254,10 @@ void run_module(enum Controller c) {
       }
       #else
       lcd.clear();
-      lcd.print("HRB_OX_MODULE is runnig");
+      lcd.print("HRB_OX_MODULE");
+      lcd.setCursor(0, 1);
+      lcd.print("is runnig");
+      delay(2000);
       #endif
 
       break;
@@ -252,7 +272,10 @@ void run_module(enum Controller c) {
       }
       #else
       lcd.clear();
-      lcd.print("TEMPERATURE_MODULE is runnig");
+      lcd.print("TEMPERATURE");
+      lcd.setCursor(0, 1);
+      lcd.print("is runnig");
+      delay(2000);
       #endif
 
       break;
@@ -277,7 +300,10 @@ void run_module(enum Controller c) {
       create_csv_file(storageRes, index);
       #else
       lcd.clear();
-      lcd.print("EXHOCARDIOGRAM is runnig");
+      lcd.print("EXHOCARDIOGRAM");
+      lcd.setCursor(0, 1);
+      lcd.print("is runnig");
+      delay(2000);
       #endif
 
       break;
@@ -367,8 +393,13 @@ void loop() {
     delay(1500);
   }
   else if (select_button == LOW) {
-    Serial.println("change select_button");
+    Serial.println("run");
     Serial.println((int)current_state);
+    lcd_show(current_state);
+    change(c);
+    switch_module(c);
+    run_module(c);
+    switch_module(NONE_MODULE);
     lcd_show(current_state);
     delay(1500);
   }
@@ -389,24 +420,28 @@ void lcd_show(LCDController lcd_controller) {
   switch (lcd_controller)
   {
   case HRB_OX_SCREEN: 
+    c = HRB_OX_MODULE;
     lcd.clear();
     lcd.print("HRB_OX_SCREEN");
     Serial.println("HRB_OX_SCREEN");
     break;
 
   case TEMPERATURE_SCREEN: 
+    c = TEMPERATURE_MODULE;
     lcd.clear();
     lcd.print("TEMPERATURE_SCREEN");
     Serial.println("TEMPERATURE_SCREEN");
     break;
 
   case ECHOCARDIOGRAM_SCREEN: 
+    c = ECHOCARDIOGRAM_MODULE;
     lcd.clear();
     lcd.print("ECHOCARDIOGRAM_SCREEN");
     Serial.println("ECHOCARDIOGRAM_SCREEN");
     break;
 
   case EMPTY: 
+    c = NONE_MODULE;
     lcd.clear();
     lcd.print("EMPTY");
     Serial.println("EMPTY");
