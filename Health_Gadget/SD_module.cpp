@@ -2,20 +2,22 @@
 #include <SD.h>
 
 #define FILE_RECORDS "records"
+#define SD_MODULE_DEBUG 0
 
 bool make_file_ready() {
-  #if DEBUG
+  #if SD_MODULE_DEBUG
   // Open serial communications and wait for port to open:
   Serial.print("Initializing SD card...");
   #endif
 
   if (!SD.begin(4)) {
-    #if DEBUG
+    #if SD_MODULE_DEBUG
     Serial.println("initialization failed!");
     #endif
+    
     return false;
   }
-  #if DEBUG
+  #if SD_MODULE_DEBUG
   Serial.println("initialization done.");
   #endif
 
@@ -31,7 +33,7 @@ bool print_in_file(uint8_t val) {
 
   // if the file opened okay, write to it:
   if (myFile) {
-    #if DEBUG
+    #if SD_MODULE_DEBUG
     Serial.print("Writing to test.txt...");
     #endif
     
@@ -40,14 +42,14 @@ bool print_in_file(uint8_t val) {
     // close the file:
     myFile.close();
 
-    #if DEBUG
+    #if SD_MODULE_DEBUG
     Serial.println("done.");
     #endif
 
     return true;
   } else {
     // if the file didn't open, print an error:
-    #if DEBUG
+    #if SD_MODULE_DEBUG
     Serial.print("error opening ");
     Serial.print(FILE_RECORDS);
     Serial.println(" file");
@@ -66,7 +68,7 @@ bool create_csv_file(const int buff[], size_t siz) {
 
   // if the file opened okay, write to it:
   if (myFile) {
-    #if DEBUG
+    #if SD_MODULE_DEBUG
     Serial.print("Writing to test.txt...");
     #endif
     
@@ -76,14 +78,14 @@ bool create_csv_file(const int buff[], size_t siz) {
     // close the file:
     myFile.close();
 
-    #if DEBUG
+    #if SD_MODULE_DEBUG
     Serial.println("done.");
     #endif
 
     return true;
   } else {
     // if the file didn't open, print an error:
-    #if DEBUG
+    #if SD_MODULE_DEBUG
     Serial.print("error opening ");
     Serial.print(FILE_RECORDS);
     Serial.println(" file");
@@ -103,7 +105,7 @@ bool read_from_file() {
   File myFile = SD.open(FILE_RECORDS, FILE_READ);
 
   if (myFile) {
-    #if DEBUG
+    #if SD_MODULE_DEBUG
     Serial.println(FILE_RECORDS);
     #endif
 
@@ -118,7 +120,7 @@ bool read_from_file() {
     return true;
   } else {
     // if the file didn't open, print an error:
-    #if DEBUG
+    #if SD_MODULE_DEBUG
     Serial.println("error opening test.txt");
     #endif
 

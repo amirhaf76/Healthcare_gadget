@@ -17,7 +17,7 @@
  * 
  * Module controller: pin 26
  * 
- * ADXL325 as Accelerator Meter:
+ * ADXL33 5 as Accelerator Meter:
  * Module 	| Arduino Board
  * vcc 		  | 3.3 v
  * GND 		  | ground
@@ -55,8 +55,15 @@
  * D5       | 25
  * D6       | 27
  * D7       | 29
- * LED+     | 5V
+ * LED+     | 5V through a 220 ohm resistor
  * LED-     | Ground
+ * 
+ * Buttons:
+ * Name     | Pin
+ * LEFT     | 6
+ * SELECT   | 5
+ * RIGHT    | 4
+ * 
  * 
  * Transistor Controller:
  * ...
@@ -64,7 +71,7 @@
 */
 
 #include <LiquidCrystal.h>
-
+#include <assert.h>
 
 #include "health_helper.h"
 #include "Echocardiogram_module.h"
@@ -79,7 +86,7 @@
 
 
 // It is for debugging program.
-#define DEBUG 0
+#define DEBUG 1
 #define SERIAL_STATUS 1
 #define FLOW_TESTING 1
 
@@ -98,15 +105,15 @@
 #define LO_NEG  3
 
 // Buttons
-#define SELECT_BUTTON 6
-#define LEFT_BUTTON 5
+#define LEFT_BUTTON 6
+#define SELECT_BUTTON 5
 #define RIGHT_BUTTON 4
 
 // SD 
-#define CS 10
-#define MOSI 11
-#define MISO 12
-#define SLK	13
+#define CS 53
+#define MOSI 51
+#define MISO 50
+#define SLK	52
 
 // LCD 
 #define D4 23
@@ -116,22 +123,22 @@
 #define RS 31
 #define LCD_EN 33
 
-int XPIN = A1;
-int YPIN = A2;
-int ZPIN = A3;
-
 #define LCD_CONTROLLER_COUNTS 4
 
 enum LCDController {
-  HRB_OX_MODULE,
-  TEMPERATURE_MODULE, 
-  ECHOCARDIOGRAM_MODULE,
+  HRB_OX_SCREEN,
+  TEMPERATURE_SCREEN, 
+  ECHOCARDIOGRAM_SCREEN,
   EMPTY,
 };
 
 LCDController current_state = EMPTY;
 Controller c = NONE_MODULE;
 LiquidCrystal lcd(RS, LCD_EN, D4, D5, D6, D7);
+
+int XPIN = A1;
+int YPIN = A2;
+int ZPIN = A3;
 
 
 
@@ -145,6 +152,7 @@ void switch_module(enum Controller c) {
   #if DEBUG
   Serial.println("OFF all module in 2s");
   #endif
+
   // "OFF all module in 2s"
   delay(2000);
 
@@ -152,26 +160,33 @@ void switch_module(enum Controller c) {
   switch(c) {
     case HRB_OX_MODULE:
       digitalWrite(PIN_HRB_OX_CONTROLLER, HIGH);
+      
       #if DEBUG
       Serial.println("HRB_OX_MODULE On");
       #endif
 
       break;
+
     case TEMPERATURE_MODULE:
       digitalWrite(PIN_BODY_TEMP_CONTROLLER, HIGH);
+
       #if DEBUG
       Serial.println("TEMPERATURE_MODULE On");
       #endif
 
       break;
+
     case ECHOCARDIOGRAM_MODULE:
       digitalWrite(PIN_ECHO_CONTROLLER, HIGH);
+
       #if DEBUG
       Serial.println("ECHOCARDIOGRAM_MODULE On");
       #endif  
 
       break;
+
     case NONE_MODULE:
+
       #if DEBUG
       Serial.println("None On");
       #endif
@@ -280,18 +295,35 @@ void run_module(enum Controller c) {
 // Setup
 void setup() {
 
+  #if DEBUG
 	Serial.begin(9600);
-  current_state = EMPTY;
+  #endif
 
   lcd_setup();
 
-  //Accelerometer_setup(XPIN, YPIN, ZPIN);
+  #if !FLOW_TESTING
+  Accelerometer_setup(XPIN, YPIN, ZPIN);
+  #endif
 
-	pinMode(SELECT_BUTTON, INPUT);
-	pinMode(LEFT_BUTTON, INPUT);
-	pinMode(RIGHT_BUTTON, INPUT);
+  assert(c == NONE_MODULE);
+  assert(current_state == EMPTY);
+  
+  
+  // Set up controller modules.
+  pinMode(PIN_ECHO_CONTROLLER, OUTPUT);
+  pinMode(PIN_BODY_TEMP_CONTROLLER, OUTPUT);
+  pinMode(PIN_HRB_OX_CONTROLLER, OUTPUT);
+  
+  // All module are off.
+  digitalWrite(PIN_ECHO_CONTROLLER, LOW);
+  digitalWrite(PIN_BODY_TEMP_CONTROLLER, LOW);
+  digitalWrite(PIN_HRB_OX_CONTROLLER, LOW);
 
-  c =  NONE_MODULE; 
+  // Set up button.
+	pinMode(SELECT_BUTTON, INPUT_PULLUP);
+	pinMode(LEFT_BUTTON, INPUT_PULLUP);
+	pinMode(RIGHT_BUTTON, INPUT_PULLUP);
+  lcd_show(current_state);
 }
 
 // Loop
@@ -318,26 +350,33 @@ void loop() {
   int left_button = digitalRead(LEFT_BUTTON);
   int right_button = digitalRead(RIGHT_BUTTON);
 
-
-  if (right_button == HIGH) {
-    int state = (c + 1) % LCD_CONTROLLER_COUNTS;
+  if (right_button == LOW) {
+    int state = (current_state + 1) % LCD_CONTROLLER_COUNTS;
     current_state = (LCDController)state;
+    Serial.println("change right_button");
+    Serial.println((int)current_state);
+    lcd_show(current_state);
+    delay(1500);
   } 
-  else if (left_button == HIGH) {
-    int state = (c + LCD_CONTROLLER_COUNTS - 1) % LCD_CONTROLLER_COUNTS;
+  else if (left_button == LOW) {
+    int state = (current_state + LCD_CONTROLLER_COUNTS - 1) % LCD_CONTROLLER_COUNTS;
     current_state = (LCDController)state;
+    Serial.println("change left_button");
+    Serial.println((int)current_state);
+    lcd_show(current_state);
+    delay(1500);
   }
-  else if (select_button == HIGH) {
-    
+  else if (select_button == LOW) {
+    Serial.println("change select_button");
+    Serial.println((int)current_state);
+    lcd_show(current_state);
+    delay(1500);
   }
-  lcd_show(current_state);
 
-  // Accelerometer_loop_step();
 
-  #if DEBUG
-  Serial.print("steps: ");
-  Serial.print(Accelerometer_get_steps());
-  Serial.println();
+
+  #if !FLOW_TESTING
+  Accelerometer_loop_step();
   #endif
   
 }
@@ -349,24 +388,35 @@ void lcd_setup() {
 void lcd_show(LCDController lcd_controller) {
   switch (lcd_controller)
   {
-  case HRB_OX_MODULE: 
+  case HRB_OX_SCREEN: 
     lcd.clear();
-    lcd.print("HRB_OX_MODULE");
+    lcd.print("HRB_OX_SCREEN");
+    Serial.println("HRB_OX_SCREEN");
     break;
-  case TEMPERATURE_MODULE: 
+
+  case TEMPERATURE_SCREEN: 
     lcd.clear();
-    lcd.print("TEMPERATURE_MODULE");
+    lcd.print("TEMPERATURE_SCREEN");
+    Serial.println("TEMPERATURE_SCREEN");
     break;
-  case ECHOCARDIOGRAM_MODULE: 
+
+  case ECHOCARDIOGRAM_SCREEN: 
     lcd.clear();
-    lcd.print("ECHOCARDIOGRAM_MODULE");
+    lcd.print("ECHOCARDIOGRAM_SCREEN");
+    Serial.println("ECHOCARDIOGRAM_SCREEN");
     break;
+
   case EMPTY: 
     lcd.clear();
     lcd.print("EMPTY");
+    Serial.println("EMPTY");
     break;
 
   default:
+    lcd.clear();
+    lcd.println("Error in");
+    lcd.print("lcd show");
+    Serial.println("Error in lcd show");
     break;
   }
 }
