@@ -6,12 +6,16 @@
  * SDA		  | 20 or SDA
  * SCL		  | 21 or SCL
  * 
+ * Module controller: pin 24
+ * 
  * MAX30102 as Oxi meter:
  * Module 	| Arduino Board
  * vcc 	  	| 3.3 v
  * GND   		| ground
  * SDA		  | SDA or 20
  * SCL		  | SCL or 21
+ * 
+ * Module controller: pin 26
  * 
  * ADXL325 as Accelerator Meter:
  * Module 	| Arduino Board
@@ -68,6 +72,7 @@
 #include "Accelerometer_module.h"
 #include "SD_module.h"
 #include "HRB_OX_module.h"
+#include "SimModule.h"
 
 /* Gadget ID */
 #define ID_GADGET 0xf2
@@ -75,13 +80,14 @@
 
 // It is for debugging program.
 #define DEBUG 0
-#define SERIAL_LOG 0
 #define SERIAL_STATUS 1
+#define FLOW_TESTING 1
 
 /* Global Variables */
-#define PIN_ECHO_CONTROLLER 7
-#define PIN_BODY_TEMP_CONTROLLER 6
-#define PIN_HRB_OX_CONTROLLER 5
+#define PIN_ECHO_CONTROLLER 22
+#define PIN_BODY_TEMP_CONTROLLER 24
+#define PIN_HRB_OX_CONTROLLER 26
+
 #define ECHO_CARDIO_TIME 5000
 #define BODY_TEMP_TIME 5000
 #define HRB_OX_TIME 5000
@@ -114,10 +120,18 @@ int XPIN = A1;
 int YPIN = A2;
 int ZPIN = A3;
 
+#define LCD_CONTROLLER_COUNTS 4
 
+enum LCDController {
+  HRB_OX_MODULE,
+  TEMPERATURE_MODULE, 
+  ECHOCARDIOGRAM_MODULE,
+  EMPTY,
+};
+
+LCDController current_state = EMPTY;
+Controller c = NONE_MODULE;
 LiquidCrystal lcd(RS, LCD_EN, D4, D5, D6, D7);
-
-enum Controller c = None;
 
 
 
@@ -157,7 +171,7 @@ void switch_module(enum Controller c) {
       #endif  
 
       break;
-    case None:
+    case NONE_MODULE:
       #if DEBUG
       Serial.println("None On");
       #endif
@@ -178,12 +192,20 @@ void switch_module(enum Controller c) {
 
 // Just counting time for 3 seconds. 
 void change(enum Controller c) {
-  Serial.println("3 s to change.");
+
+  for (int i = 3; i > 0; --i) {
+  #if DEBUG
+  Serial.print(i);
+  Serial.println("s to change.");
+  #endif
+  lcd.clear();
+  lcd.print("Swich in ");
+  lcd.print(i);
+  lcd.print("s");
+
   delay(1000);
-  Serial.println("2 s to change.");
-  delay(1000);
-  Serial.println("1 s to change.");
-  delay(1000);
+  }
+
 }
 
 void run_module(enum Controller c) {
@@ -191,33 +213,42 @@ void run_module(enum Controller c) {
   
   switch(c) {
     case HRB_OX_MODULE:
-      // Set up module
+      #if !FLOW_TESTING
       HRB_OX_module_setup(); 
 
-      // Loop for module
       while (millis() - myTime < HRB_OX_TIME)
       {
         HRB_OX_module_loop_step();
       }
+      #else
+      lcd.clear();
+      lcd.print("HRB_OX_MODULE is runnig");
+      #endif
+
       break;
+
     case TEMPERATURE_MODULE:
-      // Set up module
+      #if !FLOW_TESTING
       Thermometer_module_setup();
 
-      // Loop for module
       while (millis() - myTime < BODY_TEMP_TIME)
       {
         Thermometer_module_loop_step();
       }
+      #else
+      lcd.clear();
+      lcd.print("TEMPERATURE_MODULE is runnig");
+      #endif
+
       break;
+
     case ECHOCARDIOGRAM_MODULE:
-      // Set up module
+      #if !FLOW_TESTING
       Echocardiogram_module_setup(LO_PLUS, LO_NEG);
 
       int storageRes[100];
       int index = 0;
 
-      // Loop for module
       while (millis() - myTime < ECHO_CARDIO_TIME)
       {
         storageRes[index++] = Echocardiogram_module_loop_step();
@@ -229,9 +260,18 @@ void run_module(enum Controller c) {
       }
 
       create_csv_file(storageRes, index);
-      break;
+      #else
+      lcd.clear();
+      lcd.print("EXHOCARDIOGRAM is runnig");
+      #endif
 
-    //default:
+      break;
+    case NONE_MODULE:
+      lcd.clear();
+      lcd.print("NONE_MODULE.");
+
+    default:
+    break;
       
   }
 
@@ -241,39 +281,60 @@ void run_module(enum Controller c) {
 void setup() {
 
 	Serial.begin(9600);
+  current_state = EMPTY;
+
   lcd_setup();
-  Accelerometer_setup(XPIN, YPIN, ZPIN);
+
+  //Accelerometer_setup(XPIN, YPIN, ZPIN);
 
 	pinMode(SELECT_BUTTON, INPUT);
 	pinMode(LEFT_BUTTON, INPUT);
 	pinMode(RIGHT_BUTTON, INPUT);
 
-  c =  None; 
+  c =  NONE_MODULE; 
 }
 
 // Loop
 void loop() {
 
-  if (Serial.available() > 0) {
-    int input_key = Serial.parseInt(SKIP_ALL);
-    if (input_key >= 0 && input_key < CONTROLLERS_NUMBERS) {
-      c = (enum Controller)input_key;
+  // if (Serial.available() > 0) {
+  //   int input_key = Serial.parseInt(SKIP_ALL);
+  //   if (input_key >= 0 && input_key < CONTROLLERS_NUMBERS) {
+  //     c = (enum Controller)input_key;
 
-      #if DEBUG
-      Serial.print("change to ");
-      Serial.println(input_key);
-      #endif
+  //     #if DEBUG
+  //     Serial.print("change to ");
+  //     Serial.println(input_key);
+  //     #endif
+  
+  //     change(c);
+  //     switch_module(c);
+  //     run_module(c);
+  //     switch_module(None);
+  //   }
+  // }
 
-      change(c);
-      switch_module(c);
-      run_module(c);
-      switch_module(None);
-    }
+  int select_button = digitalRead(SELECT_BUTTON);
+  int left_button = digitalRead(LEFT_BUTTON);
+  int right_button = digitalRead(RIGHT_BUTTON);
+
+
+  if (right_button == HIGH) {
+    int state = (c + 1) % LCD_CONTROLLER_COUNTS;
+    current_state = (LCDController)state;
+  } 
+  else if (left_button == HIGH) {
+    int state = (c + LCD_CONTROLLER_COUNTS - 1) % LCD_CONTROLLER_COUNTS;
+    current_state = (LCDController)state;
   }
+  else if (select_button == HIGH) {
+    
+  }
+  lcd_show(current_state);
 
-  Accelerometer_loop_step();
+  // Accelerometer_loop_step();
 
-  #if SERIAL_STATUS
+  #if DEBUG
   Serial.print("steps: ");
   Serial.print(Accelerometer_get_steps());
   Serial.println();
@@ -282,11 +343,36 @@ void loop() {
 }
 
 void lcd_setup() {
-    lcd.begin(16, 2);
+  lcd.begin(16, 2);
 }
 
-void lcd_controller(int a) {
+void lcd_show(LCDController lcd_controller) {
+  switch (lcd_controller)
+  {
+  case HRB_OX_MODULE: 
+    lcd.clear();
+    lcd.print("HRB_OX_MODULE");
+    break;
+  case TEMPERATURE_MODULE: 
+    lcd.clear();
+    lcd.print("TEMPERATURE_MODULE");
+    break;
+  case ECHOCARDIOGRAM_MODULE: 
+    lcd.clear();
+    lcd.print("ECHOCARDIOGRAM_MODULE");
+    break;
+  case EMPTY: 
+    lcd.clear();
+    lcd.print("EMPTY");
+    break;
+
+  default:
+    break;
+  }
 }
+
+
+
 /* todo: 
 	control
 	GPS,

@@ -29,7 +29,7 @@ void GPS_setup() {
 	#endif
 }
 
-bool Get_GPS_data() {
+bool get_GPS_data() {
 	 //************** Get GPS data *******************
 	 bool status = sim808.getGPS();
    if (status) {
@@ -84,4 +84,9 @@ bool Get_GPS_data() {
 	return status;
 }
 
+int has_signal() {
+  int power;
+  sim808.getSignalStrength(&power);
 
+  return power;
+}

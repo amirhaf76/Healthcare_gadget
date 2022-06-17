@@ -2,5 +2,6 @@
 #define SIM_MODULE_H
 
 
-bool Get_GPS_data()
+bool get_GPS_data();
+int has_signal();
 #endif
