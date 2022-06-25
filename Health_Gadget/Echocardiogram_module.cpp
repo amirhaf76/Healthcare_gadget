@@ -7,6 +7,7 @@ int lo_neg = -1;
 
 void Echocardiogram_module_setup(int plus, int neg) {
   #if DEBUG_ECHOCARDIOGRAM_MODULE
+  Serial.begin(9600);
   Serial.println("Initializing Echo_cardio_module ...");
   #endif
   lo_neg = neg;

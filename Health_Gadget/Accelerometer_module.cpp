@@ -2,7 +2,7 @@
 #include "Accelerometer_module.h"
 #include "Arduino.h"
 
-#define DEBUG_ACCELEROMETER 1
+#define DEBUG_ACCELEROMETER 0
 
 Point current_point;
 int g_xpin = -1;
@@ -18,9 +18,12 @@ void Accelerometer_setup(int xpin, int ypin, int zpin)
     g_xpin = xpin;
     g_ypin = ypin;
     g_zpin = zpin;
-#if DEBUG
+
+#if DEBUG_ACCELEROMETER
+    Serial.begin(9600);
     Serial.println("Initializing Accelerometer...");
 #endif
+
     current_point.x = analogRead(xpin);
     current_point.y = analogRead(ypin);
     current_point.z = analogRead(zpin);
