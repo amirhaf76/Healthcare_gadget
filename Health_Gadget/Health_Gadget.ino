@@ -81,14 +81,14 @@
 #include "HRB_OX_module.h"
 #include "SimModule.h"
 
-/* Gadget ID */
-#define ID_GADGET 0xf2
+/* Gadget GUID */
+#define ID_GADGET "fc309105-e43e-40de-9356-d6ba875c8fd2"
 
 
 // It is for debugging program.
 #define DEBUG 1
 #define SERIAL_STATUS 1
-#define FLOW_TESTING 1
+#define FLOW_TESTING 0
 
 /* Global Variables */
 #define PIN_ECHO_CONTROLLER 22
@@ -123,12 +123,13 @@
 #define RS 31
 #define LCD_EN 33
 
-#define LCD_CONTROLLER_COUNTS 4
+#define LCD_CONTROLLER_COUNTS 5
 
 enum LCDController {
   HRB_OX_SCREEN,
   TEMPERATURE_SCREEN, 
   ECHOCARDIOGRAM_SCREEN,
+  STEPS,
   EMPTY,
 };
 
@@ -140,6 +141,10 @@ int XPIN = A1;
 int YPIN = A2;
 int ZPIN = A3;
 
+uint8_t counter;
+double t;
+int storageRes[100];
+int index = 0;
 
 
 void switch_module(enum Controller c) {
@@ -221,8 +226,8 @@ void switch_module(enum Controller c) {
 }
 
 // Just counting time for 3 seconds. 
-void change(enum Controller c) {
-
+void change() {
+  
   for (int i = 3; i > 0; --i) {
   #if DEBUG
   Serial.print(i);
@@ -252,6 +257,14 @@ void run_module(enum Controller c) {
       {
         HRB_OX_module_loop_step();
       }
+
+      HRB_OX_module_down();
+
+      lcd.clear();
+      lcd.print("HRB_OX_MODULE");
+      lcd.setCursor(0, 1);
+      lcd.print("is runnig");
+      delay(2000);
       #else
       lcd.clear();
       lcd.print("HRB_OX_MODULE");
@@ -266,10 +279,21 @@ void run_module(enum Controller c) {
       #if !FLOW_TESTING
       Thermometer_module_setup();
 
+      counter = 0;
+      t = 0;
+      
       while (millis() - myTime < BODY_TEMP_TIME)
       {
         Thermometer_module_loop_step();
+        t += Thermometer_get_temperature();
+        ++counter;
       }
+      lcd.clear();
+      lcd.print("TEMPERATURE:");
+      lcd.setCursor(0, 1);
+      lcd.print((t/counter)+5, 2);
+      lcd.print("c");
+      delay(5000);
       #else
       lcd.clear();
       lcd.print("TEMPERATURE");
@@ -284,8 +308,7 @@ void run_module(enum Controller c) {
       #if !FLOW_TESTING
       Echocardiogram_module_setup(LO_PLUS, LO_NEG);
 
-      int storageRes[100];
-      int index = 0;
+      index = 0;
 
       while (millis() - myTime < ECHO_CARDIO_TIME)
       {
@@ -298,6 +321,12 @@ void run_module(enum Controller c) {
       }
 
       create_csv_file(storageRes, index);
+
+      lcd.clear();
+      lcd.print("EXHOCARDIOGRAM");
+      lcd.setCursor(0, 1);
+      lcd.print("is runnig");
+      delay(2000);
       #else
       lcd.clear();
       lcd.print("EXHOCARDIOGRAM");
@@ -328,7 +357,7 @@ void setup() {
   lcd_setup();
 
   #if !FLOW_TESTING
-  Accelerometer_setup(XPIN, YPIN, ZPIN);
+  accelerometer_setup(XPIN, YPIN, ZPIN);
   #endif
 
   assert(c == NONE_MODULE);
@@ -354,24 +383,8 @@ void setup() {
 
 // Loop
 void loop() {
-
-  // if (Serial.available() > 0) {
-  //   int input_key = Serial.parseInt(SKIP_ALL);
-  //   if (input_key >= 0 && input_key < CONTROLLERS_NUMBERS) {
-  //     c = (enum Controller)input_key;
-
-  //     #if DEBUG
-  //     Serial.print("change to ");
-  //     Serial.println(input_key);
-  //     #endif
   
-  //     change(c);
-  //     switch_module(c);
-  //     run_module(c);
-  //     switch_module(None);
-  //   }
-  // }
-
+  // Buttons
   int select_button = digitalRead(SELECT_BUTTON);
   int left_button = digitalRead(LEFT_BUTTON);
   int right_button = digitalRead(RIGHT_BUTTON);
@@ -396,7 +409,7 @@ void loop() {
     Serial.println("run");
     Serial.println((int)current_state);
     lcd_show(current_state);
-    change(c);
+    change();
     switch_module(c);
     run_module(c);
     switch_module(NONE_MODULE);
@@ -404,10 +417,13 @@ void loop() {
     delay(1500);
   }
 
+  if (current_state == STEPS) {
+    lcd_show(current_state);
+  }
 
 
   #if !FLOW_TESTING
-  Accelerometer_loop_step();
+  accelerometer_loop_step();
   #endif
   
 }
@@ -438,6 +454,14 @@ void lcd_show(LCDController lcd_controller) {
     lcd.clear();
     lcd.print("ECHOCARDIOGRAM_SCREEN");
     Serial.println("ECHOCARDIOGRAM_SCREEN");
+    break;
+  case STEPS: 
+    c = ACCELEROMETER_MODULE;
+    lcd.clear();
+    lcd.print("steps");
+    lcd.setCursor(0, 1);
+    lcd.print(accelerometer_get_steps());
+    Serial.println("steps");
     break;
 
   case EMPTY: 

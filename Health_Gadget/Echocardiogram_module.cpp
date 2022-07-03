@@ -1,6 +1,6 @@
 #include "Arduino.h"
 #include <HardwareSerial.h>
-#define DEBUG_ECHOCARDIOGRAM_MODULE 0
+#define DEBUG_ECHOCARDIOGRAM_MODULE 1
 
 int lo_plus = -1;
 int lo_neg = -1;

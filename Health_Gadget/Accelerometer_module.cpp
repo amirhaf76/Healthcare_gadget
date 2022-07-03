@@ -2,18 +2,22 @@
 #include "Accelerometer_module.h"
 #include "Arduino.h"
 
-#define DEBUG_ACCELEROMETER 0
+#define DEBUG_ACCELEROMETER 1
 
+#define MAX_BOUND 30
+#define MIN_BOUND 18
 Point current_point;
 int g_xpin = -1;
 int g_ypin = -1;
 int g_zpin = -1;
 int CF = 1;
 
-long unsigned steps;
+long unsigned time = 0;
 
-/* Stepup Declarations */
-void Accelerometer_setup(int xpin, int ypin, int zpin)
+static unsigned long steps = 0;
+
+
+void accelerometer_setup(int xpin, int ypin, int zpin)
 {
     g_xpin = xpin;
     g_ypin = ypin;
@@ -29,9 +33,10 @@ void Accelerometer_setup(int xpin, int ypin, int zpin)
     current_point.z = analogRead(zpin);
 }
 
-void Accelerometer_loop_step()
+
+void accelerometer_loop_step()
 {
-    if (g_xpin == -1 || g_ypin == -1 || g_zpin)
+    if (g_xpin == -1 || g_ypin == -1 || g_zpin == -1)
         return; // one or more than one pin numbers are not correct
 
     Point temporary_point;
@@ -49,12 +54,24 @@ void Accelerometer_loop_step()
 
     current_point = temporary_point;
 
-    if (bandWithFilter(result, 18, 30))
+#if DEBUG_ACCELEROMETER
+    if (1) {
+        Serial.println("----- Steps -----");
+        Serial.print("current: ");
+        Serial.print(steps);
+        Serial.print(", current res: ");
+        Serial.println(result);
+    }
+#endif
+
+    if (bandWithFilter(result, MIN_BOUND, MAX_BOUND)) {
         ++steps;
+    }
 
     delay(100);
 }
 
-long int Accelerometer_get_steps() {
+
+unsigned long accelerometer_get_steps() {
     return steps;
 }

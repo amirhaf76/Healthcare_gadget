@@ -16,7 +16,7 @@ enum Controller {
     ACCELEROMETER_MODULE, 
     SD_MODULE, 
     ECHOCARDIOGRAM_MODULE,
-    NONE_MODULE
+    NONE_MODULE,
 };
 
 typedef struct {

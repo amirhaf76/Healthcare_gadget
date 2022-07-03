@@ -3,6 +3,6 @@
 
 void Thermometer_module_setup();
 void Thermometer_module_loop_step();
-int Thermometer_get_temperature();
+double Thermometer_get_temperature();
 
 #endif

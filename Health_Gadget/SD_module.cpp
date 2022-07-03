@@ -2,7 +2,7 @@
 #include <SD.h>
 
 #define FILE_RECORDS "records"
-#define SD_MODULE_DEBUG 0
+#define SD_MODULE_DEBUG 1
 
 bool make_file_ready() {
   #if SD_MODULE_DEBUG
@@ -24,7 +24,7 @@ bool make_file_ready() {
   return true;
 }
 
-bool print_in_file(uint8_t val) {
+bool print_in_file(int val) {
   // making file ready
   if (!make_file_ready()) 
     return false; // file is not ready and return
@@ -58,6 +58,79 @@ bool print_in_file(uint8_t val) {
     return false;
   }
 }
+
+
+bool print_in_file(String val) {
+  // making file ready
+  if (!make_file_ready()) 
+    return false; // file is not ready and return
+
+  File myFile = SD.open(FILE_RECORDS, FILE_WRITE);
+
+  // if the file opened okay, write to it:
+  if (myFile) {
+    #if SD_MODULE_DEBUG
+    Serial.print("Writing to test.txt...");
+    #endif
+    
+    myFile.print(val);
+
+    // close the file:
+    myFile.close();
+
+    #if SD_MODULE_DEBUG
+    Serial.println("done.");
+    #endif
+
+    return true;
+  } else {
+    // if the file didn't open, print an error:
+    #if SD_MODULE_DEBUG
+    Serial.print("error opening ");
+    Serial.print(FILE_RECORDS);
+    Serial.println(" file");
+    #endif
+
+    return false;
+  }
+}
+
+
+bool print_in_file(double val) {
+  // making file ready
+  if (!make_file_ready()) 
+    return false; // file is not ready and return
+
+  File myFile = SD.open(FILE_RECORDS, FILE_WRITE);
+
+  // if the file opened okay, write to it:
+  if (myFile) {
+    #if SD_MODULE_DEBUG
+    Serial.print("Writing to test.txt...");
+    #endif
+    
+    myFile.print(val);
+
+    // close the file:
+    myFile.close();
+
+    #if SD_MODULE_DEBUG
+    Serial.println("done.");
+    #endif
+
+    return true;
+  } else {
+    // if the file didn't open, print an error:
+    #if SD_MODULE_DEBUG
+    Serial.print("error opening ");
+    Serial.print(FILE_RECORDS);
+    Serial.println(" file");
+    #endif
+
+    return false;
+  }
+}
+
 
 bool create_csv_file(const int buff[], size_t siz) {
   // making file ready

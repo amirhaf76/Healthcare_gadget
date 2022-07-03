@@ -2,16 +2,17 @@
 #include "Protocentral_MAX30205.h"
 #include "Arduino.h"
 
-#define DEBUG_THERMOMETER_MODULE 0
+#define DEBUG_THERMOMETER_MODULE 1
 
-/* Temperature_module */
+
 static MAX30205 THERMOMETER_SENSOR;
-static int g_temperature = 0;
+static double g_temperature = 0;
 
-/* Implimentation */
+
 void Thermometer_module_setup()
 {
 #if DEBUG_THERMOMETER_MODULE
+    Serial.begin(9600);
     Serial.println("Initializing Thermometer ...");
 #endif
 
@@ -35,20 +36,20 @@ void Thermometer_module_setup()
     THERMOMETER_SENSOR.begin(); // set continuos mode, active mode
 }
 
+// read temperature for every 100ms
 void Thermometer_module_loop_step()
 {
-
-    // read temperature for every 100ms
     g_temperature = THERMOMETER_SENSOR.getTemperature();
 
 #if DEBUG_THERMOMETER_MODULE
-    Serial.print(temperature, 2);
+    Serial.print(g_temperature, 2);
     Serial.println("'c");
 #endif
 
     delay(100);
 }
 
-int Thermometer_get_temperature() {
+
+double Thermometer_get_temperature() {
     return g_temperature;
 }

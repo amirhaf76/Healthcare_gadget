@@ -2,10 +2,11 @@
 #include <SoftwareSerial.h>
 #include <sim808.h>
 
-#define SIM_DEBUG 0
+#define SIM_DEBUG 1
 
 #define PIN_TX    10
 #define PIN_RX    11
+
 SoftwareSerial mySerial(PIN_TX,PIN_RX);
 DFRobot_SIM808 sim808(&mySerial);//Connect RX,TX,PWR,
 
