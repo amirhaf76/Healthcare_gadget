@@ -17,7 +17,7 @@
  * 
  * Module controller: pin 26
  * 
- * ADXL33 5 as Accelerator Meter:
+ * ADXL335 as Accelerator Meter:
  * Module 	| Arduino Board
  * vcc 		  | 3.3 v
  * GND 		  | ground
@@ -146,6 +146,8 @@ double t;
 int storageRes[100];
 int index = 0;
 
+static uint8_t file_index = 0;
+char file_name_temp[21];
 
 void switch_module(enum Controller c) {
 
@@ -229,10 +231,12 @@ void switch_module(enum Controller c) {
 void change() {
   
   for (int i = 3; i > 0; --i) {
+
   #if DEBUG
   Serial.print(i);
   Serial.println("s to change.");
   #endif
+
   lcd.clear();
   lcd.print("Swich in ");
   lcd.print(i);
@@ -246,24 +250,34 @@ void change() {
 }
 
 void run_module(enum Controller c) {
-  unsigned long myTime = millis();
-  
+  unsigned long myTime;
+  bool echo_status = false;
+  float bt=0;
+  int avg_bt=0;
   switch(c) {
     case HRB_OX_MODULE:
       #if !FLOW_TESTING
       HRB_OX_module_setup(); 
 
-      while (millis() - myTime < HRB_OX_TIME)
-      {
-        HRB_OX_module_loop_step();
-      }
-
-      HRB_OX_module_down();
-
+      set_time(&myTime);
       lcd.clear();
       lcd.print("HRB_OX_MODULE");
       lcd.setCursor(0, 1);
       lcd.print("is runnig");
+      while (!is_time_pass(&myTime, HRB_OX_TIME))
+      {
+        HRB_OX_module_loop_step();
+      }
+
+      
+      get_beatsPerMinute_beatAvg(&bt, &avg_bt);
+      lcd.clear();
+      lcd.print("BPM, AVG BPM");
+      lcd.setCursor(0, 1);
+      lcd.print(bt);
+      lcd.print(", ");
+      lcd.print(avg_bt);
+
       delay(2000);
       #else
       lcd.clear();
@@ -281,8 +295,8 @@ void run_module(enum Controller c) {
 
       counter = 0;
       t = 0;
-      
-      while (millis() - myTime < BODY_TEMP_TIME)
+      set_time(&myTime);
+      while (!is_time_pass(&myTime, BODY_TEMP_TIME))
       {
         Thermometer_module_loop_step();
         t += Thermometer_get_temperature();
@@ -291,7 +305,9 @@ void run_module(enum Controller c) {
       lcd.clear();
       lcd.print("TEMPERATURE:");
       lcd.setCursor(0, 1);
-      lcd.print((t/counter)+5, 2);
+      lcd.print((t/counter), 2);
+      lcd.print("c, ");
+      lcd.print((t/counter)+10, 2);
       lcd.print("c");
       delay(5000);
       #else
@@ -307,25 +323,41 @@ void run_module(enum Controller c) {
     case ECHOCARDIOGRAM_MODULE:
       #if !FLOW_TESTING
       Echocardiogram_module_setup(LO_PLUS, LO_NEG);
-
+      lcd.clear();
+      lcd.print("ECHO");
+      lcd.setCursor(0, 1);
+      lcd.print("is runnig");
+      
       index = 0;
+      file_index = 0;
+      file_name_temp[0] = '\0';
 
-      while (millis() - myTime < ECHO_CARDIO_TIME)
+
+      sprintf(file_name_temp, "file_num_%i.csv", file_index++);
+      set_time(&myTime);
+      
+      while (!is_time_pass(&myTime, ECHO_CARDIO_TIME))
       {
         storageRes[index++] = Echocardiogram_module_loop_step();
 
         if ( index == 100) {
-          create_csv_file(storageRes, index);
+          echo_status = echo_status || create_csv_file(storageRes, index, file_name_temp);
           index = 0;
+          delay(1000);
+          
         }
       }
-
-      create_csv_file(storageRes, index);
-
+      if (index != 0 ) {
+        echo_status = echo_status || create_csv_file(storageRes, index, file_name_temp);
+        index = 0;
+      }
+      
+      if (echo_status) {
       lcd.clear();
-      lcd.print("EXHOCARDIOGRAM");
+      lcd.print("Echo done");
       lcd.setCursor(0, 1);
-      lcd.print("is runnig");
+      lcd.print("correctly");
+      }
       delay(2000);
       #else
       lcd.clear();
@@ -354,22 +386,17 @@ void setup() {
 	Serial.begin(9600);
   #endif
 
-  lcd_setup();
-
-  #if !FLOW_TESTING
-  accelerometer_setup(XPIN, YPIN, ZPIN);
-  #endif
-
   assert(c == NONE_MODULE);
   assert(current_state == EMPTY);
-  
-  
+
+  lcd_setup();
+
   // Set up controller modules.
   pinMode(PIN_ECHO_CONTROLLER, OUTPUT);
   pinMode(PIN_BODY_TEMP_CONTROLLER, OUTPUT);
   pinMode(PIN_HRB_OX_CONTROLLER, OUTPUT);
   
-  // All module are off.
+  // Making all modules off.
   digitalWrite(PIN_ECHO_CONTROLLER, LOW);
   digitalWrite(PIN_BODY_TEMP_CONTROLLER, LOW);
   digitalWrite(PIN_HRB_OX_CONTROLLER, LOW);
@@ -378,7 +405,12 @@ void setup() {
 	pinMode(SELECT_BUTTON, INPUT_PULLUP);
 	pinMode(LEFT_BUTTON, INPUT_PULLUP);
 	pinMode(RIGHT_BUTTON, INPUT_PULLUP);
+
   lcd_show(current_state);
+
+  #if !FLOW_TESTING
+  accelerometer_setup(XPIN, YPIN, ZPIN);
+  #endif
 }
 
 // Loop
@@ -389,30 +421,38 @@ void loop() {
   int left_button = digitalRead(LEFT_BUTTON);
   int right_button = digitalRead(RIGHT_BUTTON);
 
+  // Todo: making new function.
   if (right_button == LOW) {
     int state = (current_state + 1) % LCD_CONTROLLER_COUNTS;
     current_state = (LCDController)state;
-    Serial.println("change right_button");
+
+    Serial.print("change right_button: ");
     Serial.println((int)current_state);
+
     lcd_show(current_state);
     delay(1500);
   } 
   else if (left_button == LOW) {
     int state = (current_state + LCD_CONTROLLER_COUNTS - 1) % LCD_CONTROLLER_COUNTS;
     current_state = (LCDController)state;
-    Serial.println("change left_button");
+
+    Serial.print("change right_button: ");
     Serial.println((int)current_state);
+    
     lcd_show(current_state);
     delay(1500);
   }
   else if (select_button == LOW) {
     Serial.println("run");
     Serial.println((int)current_state);
+
     lcd_show(current_state);
+
     change();
     switch_module(c);
     run_module(c);
     switch_module(NONE_MODULE);
+
     lcd_show(current_state);
     delay(1500);
   }
@@ -480,7 +520,14 @@ void lcd_show(LCDController lcd_controller) {
   }
 }
 
+void set_time(unsigned long * time_set) {
+  *time_set = millis();
+}
 
+bool is_time_pass(unsigned long * time_set, unsigned long during) {
+
+  return (millis() - *time_set) >= during || (millis() - *time_set) < 0;
+}
 
 /* todo: 
 	control

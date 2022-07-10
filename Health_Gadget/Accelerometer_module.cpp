@@ -16,6 +16,9 @@ long unsigned time = 0;
 
 static unsigned long steps = 0;
 
+#if DEBUG_ACCELEROMETER
+bool time_passed = true;
+#endif
 
 void accelerometer_setup(int xpin, int ypin, int zpin)
 {
@@ -53,14 +56,20 @@ void accelerometer_loop_step()
     double result = noiseFilter(magnitude_calculated(diff), CF);
 
     current_point = temporary_point;
-
 #if DEBUG_ACCELEROMETER
-    if (1) {
+    if (time_passed) {
+        set_time(&time);
+        time_passed = false;
+    }
+#endif
+#if DEBUG_ACCELEROMETER
+    if (is_time_pass(&time, 3000UL)) {
         Serial.println("----- Steps -----");
         Serial.print("current: ");
         Serial.print(steps);
         Serial.print(", current res: ");
         Serial.println(result);
+        time_passed = true;
     }
 #endif
 

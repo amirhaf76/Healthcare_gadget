@@ -33,5 +33,7 @@ int bandWithFilter(double x, int min_val, int max_val);
 int find_local_max(const int siz, const double arr[], double min_value);
 double find_max(const int siz, const double arr[]);
 
+void set_time(unsigned long * curr_time);
+bool is_time_pass(unsigned long * curr_time, unsigned long during);
 
 #endif

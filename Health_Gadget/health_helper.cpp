@@ -24,7 +24,7 @@ int bandWithFilter(double x, int min_val, int max_val) {
   if (min_val <=x && x <= max_val)
     return 1;
 
-  return -1;
+  return 0;
 }
 
 

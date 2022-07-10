@@ -1,8 +1,8 @@
 #include <SPI.h>
 #include <SD.h>
 
-#define FILE_RECORDS "records"
 #define SD_MODULE_DEBUG 1
+#define PIN_CS 53
 
 bool make_file_ready() {
   #if SD_MODULE_DEBUG
@@ -10,13 +10,16 @@ bool make_file_ready() {
   Serial.print("Initializing SD card...");
   #endif
 
-  if (!SD.begin(4)) {
+  pinMode(PIN_CS, OUTPUT);
+
+  if (!SD.begin(PIN_CS)) {
     #if SD_MODULE_DEBUG
     Serial.println("initialization failed!");
     #endif
     
     return false;
   }
+
   #if SD_MODULE_DEBUG
   Serial.println("initialization done.");
   #endif
@@ -24,12 +27,12 @@ bool make_file_ready() {
   return true;
 }
 
-bool print_in_file(int val) {
+bool print_in_file(int val, char * fileName) {
   // making file ready
   if (!make_file_ready()) 
     return false; // file is not ready and return
 
-  File myFile = SD.open(FILE_RECORDS, FILE_WRITE);
+  File myFile = SD.open(fileName, FILE_WRITE);
 
   // if the file opened okay, write to it:
   if (myFile) {
@@ -51,7 +54,7 @@ bool print_in_file(int val) {
     // if the file didn't open, print an error:
     #if SD_MODULE_DEBUG
     Serial.print("error opening ");
-    Serial.print(FILE_RECORDS);
+    Serial.print(fileName);
     Serial.println(" file");
     #endif
 
@@ -60,12 +63,12 @@ bool print_in_file(int val) {
 }
 
 
-bool print_in_file(String val) {
+bool print_in_file(String val, char * fileName) {
   // making file ready
   if (!make_file_ready()) 
     return false; // file is not ready and return
 
-  File myFile = SD.open(FILE_RECORDS, FILE_WRITE);
+  File myFile = SD.open(fileName, FILE_WRITE);
 
   // if the file opened okay, write to it:
   if (myFile) {
@@ -87,7 +90,7 @@ bool print_in_file(String val) {
     // if the file didn't open, print an error:
     #if SD_MODULE_DEBUG
     Serial.print("error opening ");
-    Serial.print(FILE_RECORDS);
+    Serial.print(fileName);
     Serial.println(" file");
     #endif
 
@@ -96,12 +99,12 @@ bool print_in_file(String val) {
 }
 
 
-bool print_in_file(double val) {
+bool print_in_file(double val, char * fileName) {
   // making file ready
   if (!make_file_ready()) 
     return false; // file is not ready and return
 
-  File myFile = SD.open(FILE_RECORDS, FILE_WRITE);
+  File myFile = SD.open(fileName, FILE_WRITE);
 
   // if the file opened okay, write to it:
   if (myFile) {
@@ -123,7 +126,7 @@ bool print_in_file(double val) {
     // if the file didn't open, print an error:
     #if SD_MODULE_DEBUG
     Serial.print("error opening ");
-    Serial.print(FILE_RECORDS);
+    Serial.print(fileName);
     Serial.println(" file");
     #endif
 
@@ -132,7 +135,7 @@ bool print_in_file(double val) {
 }
 
 
-bool create_csv_file(const int buff[], size_t siz) {
+bool create_csv_file(const int buff[], size_t siz, char * fileName) {
   // making file ready
   if (!make_file_ready()) 
     return false; // file is not ready and return
@@ -145,8 +148,12 @@ bool create_csv_file(const int buff[], size_t siz) {
     Serial.print("Writing to test.txt...");
     #endif
     
-    for (size_t i = 0; i < siz; ++i)
+    for (size_t i = 0; i < siz; ++i) {
+      myFile.print(i);
+      myFile.print(",");
       myFile.println(buff[i]);
+    }
+      
 
     // close the file:
     myFile.close();
@@ -160,7 +167,7 @@ bool create_csv_file(const int buff[], size_t siz) {
     // if the file didn't open, print an error:
     #if SD_MODULE_DEBUG
     Serial.print("error opening ");
-    Serial.print(FILE_RECORDS);
+    Serial.print(fileName);
     Serial.println(" file");
     #endif
 
@@ -168,18 +175,18 @@ bool create_csv_file(const int buff[], size_t siz) {
   }
 }
 
-bool read_from_file() {
+bool read_from_file(char * fileName) {
   // making file ready
   if (!make_file_ready()) 
     return false; // file is not ready and return
 
   // re-open the file for reading:
 
-  File myFile = SD.open(FILE_RECORDS, FILE_READ);
+  File myFile = SD.open(fileName, FILE_READ);
 
   if (myFile) {
     #if SD_MODULE_DEBUG
-    Serial.println(FILE_RECORDS);
+    Serial.println(fileName);
     #endif
 
     // read from the file until there's nothing else in it:
