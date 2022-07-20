@@ -1,6 +1,7 @@
 #include "health_helper.h"
 #include "math.h"
 
+
 double magnitude_calculated(Point p) {
     return sqrt(
             pow(p.x, 2.0) +

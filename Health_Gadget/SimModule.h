@@ -2,9 +2,13 @@
 #define SIM_MODULE_H
 
 
-bool get_GPS_data();
+int8_t setup_simModule();
+
 int has_signal();
-void send_sms(char *, size_t );
-void send_data_to_server();
+void send_sms(char * phone_number, char * message);
+bool gps_setup();
+bool get_GPS_data();
+bool send_data(char * http_str, int siz_http_str);
+
 
 #endif

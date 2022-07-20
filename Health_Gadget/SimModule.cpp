@@ -6,47 +6,63 @@
 
 #define PIN_TX    10
 #define PIN_RX    11
+#define SIM808_BUFFER_SIZE 512
 
 SoftwareSerial mySerial(PIN_TX,PIN_RX);
 DFRobot_SIM808 sim808(&mySerial);//Connect RX,TX,PWR,
 
 char http_cmd[] = "GET /media/uploads/mbed_official/hello.txt HTTP/1.0\r\n\r\n";
-char buffer[512];
+char buffer[SIM808_BUFFER_SIZE];
 
-void setup_simModule() {
+int8_t setup_simModule() {
   mySerial.begin(9600);
 
   #if SIM_DEBUG
   Serial.begin(9600);
   #endif
 
-}
-
-int8_t GPS_setup() {
   uint8_t counter = 0;
 
-  //******** Initialize sim808 module *************
   while(!sim808.init()) { 
 		delay(1000);
+
 		#if SIM_DEBUG
 		Serial.print("Sim808 init error\r\n");
 		#endif
 
-    if ((counter++) == 3)
+    if ((counter++) == 5)
       return -1;
   }
 
+  return 0;
+}
+
+void send_sms(char * phone_number, char * message) 
+{
+  bool res = sim808.sendSMS(phone_number,message); 
+
+  #if SIM_DEBUG
+		Serial.print("phone_number: ");
+		Serial.print(phone_number);
+		Serial.print(", message: ");
+		Serial.println(message);
+    Serial.println((res) ? "Message sent." : "Message failed.");
+	#endif
+}
+
+bool gps_setup() {
+
   //************* Turn on the GPS power************
+  bool res = sim808.attachGPS();
+
 	#if SIM_DEBUG
-  if( sim808.attachGPS())
+  if(res)
       Serial.println("Open the GPS power success");
   else 
       Serial.println("Open the GPS power failure");
-	#else
-	sim808.attachGPS();
 	#endif
   
-  return 0;
+  return res;
 }
 
 bool get_GPS_data() {
@@ -108,23 +124,17 @@ int has_signal() {
   int power;
   sim808.getSignalStrength(&power);
 
+  #if SIM_DEBUG
+  Serial.print("Signal Strength: ");
+  Serial.println(power);
+  #endif
+
   return power;
 }
 
-void send_data() {
-  // mySerial.begin(9600);
-  // Serial.begin(9600);
+bool send_data(char * http_str, int siz_http_str) {
   
-  //******** Initialize sim808 module *************
-  while(!sim808.init()) {
-    delay(1000);
-    
-    #if SIM_DEBUG
-    Serial.print("Sim808 init error\r\n");
-    #endif
-  }
-  delay(3000);  
-    
+  int8_t counter = 5;
   //*********** Attempt DHCP *******************
   while(!sim808.join(F("cmnet"))) {
 
@@ -132,6 +142,8 @@ void send_data() {
     Serial.println("Sim808 join network error");
     #endif
     
+    if (counter++ == 5) return false;
+
     delay(2000);
   }
 
@@ -157,10 +169,10 @@ void send_data() {
   Serial.println("waiting to fetch...");
   #endif
 
-  sim808.send(http_cmd, sizeof(http_cmd)-1);
+  sim808.send(http_str, sizeof(siz_http_str)-1);
 
   while (true) {
-    int ret = sim808.recv(buffer, sizeof(buffer)-1);
+    int ret = sim808.recv(buffer, SIM808_BUFFER_SIZE-1);
     
     if (ret <= 0){
 

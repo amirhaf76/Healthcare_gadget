@@ -257,20 +257,20 @@ void run_module(enum Controller c) {
   switch(c) {
     case HRB_OX_MODULE:
       #if !FLOW_TESTING
-      HRB_OX_module_setup(); 
+      HRB_OX_module_wakeup(); 
 
       set_time(&myTime);
       lcd.clear();
       lcd.print("HRB_OX_MODULE");
       lcd.setCursor(0, 1);
       lcd.print("is runnig");
+
       while (!is_time_pass(&myTime, HRB_OX_TIME))
       {
-        HRB_OX_module_loop_step();
+        HRB_OX_module_loop_step_new();
       }
 
       
-      get_beatsPerMinute_beatAvg(&bt, &avg_bt);
       lcd.clear();
       lcd.print("BPM, AVG BPM");
       lcd.setCursor(0, 1);
@@ -278,6 +278,8 @@ void run_module(enum Controller c) {
       lcd.print(", ");
       lcd.print(avg_bt);
 
+      HRB_OX_module_shotdown();
+      
       delay(2000);
       #else
       lcd.clear();
@@ -410,6 +412,7 @@ void setup() {
 
   #if !FLOW_TESTING
   accelerometer_setup(XPIN, YPIN, ZPIN);
+  HRB_OX_module_setup_at_first();
   #endif
 }
 
