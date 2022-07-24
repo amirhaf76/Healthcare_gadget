@@ -1,24 +1,21 @@
 #include "health_helper.h"
-#include "Accelerometer_module.h"
 #include "Arduino.h"
 
 #define DEBUG_ACCELEROMETER 1
+#define DEBUG_TIME_PASS 3000UL
 
 #define MAX_BOUND 30
 #define MIN_BOUND 18
-Point current_point;
-int g_xpin = -1;
-int g_ypin = -1;
-int g_zpin = -1;
-int CF = 1;
 
-long unsigned time = 0;
+static Point current_point;
+static int g_xpin = -1;
+static int g_ypin = -1;
+static int g_zpin = -1;
+static int CF = 1;
+
+static long unsigned time = 0;
 
 static unsigned long steps = 0;
-
-#if DEBUG_ACCELEROMETER
-bool time_passed = true;
-#endif
 
 void accelerometer_setup(int xpin, int ypin, int zpin)
 {
@@ -26,21 +23,24 @@ void accelerometer_setup(int xpin, int ypin, int zpin)
     g_ypin = ypin;
     g_zpin = zpin;
 
-#if DEBUG_ACCELEROMETER
-    Serial.begin(9600);
-    Serial.println("Initializing Accelerometer...");
-#endif
-
     current_point.x = analogRead(xpin);
     current_point.y = analogRead(ypin);
     current_point.z = analogRead(zpin);
+
+#if DEBUG_ACCELEROMETER
+    Serial.begin(9600);
+    Serial.println("Initializing Accelerometer...");
+    
+    set_time(&time);
+#endif
 }
 
 
 void accelerometer_loop_step()
 {
+    // one or more than one pin numbers are not correct
     if (g_xpin == -1 || g_ypin == -1 || g_zpin == -1)
-        return; // one or more than one pin numbers are not correct
+        return; 
 
     Point temporary_point;
     temporary_point.x = analogRead(g_xpin);
@@ -56,20 +56,15 @@ void accelerometer_loop_step()
     double result = noiseFilter(magnitude_calculated(diff), CF);
 
     current_point = temporary_point;
+
 #if DEBUG_ACCELEROMETER
-    if (time_passed) {
-        set_time(&time);
-        time_passed = false;
-    }
-#endif
-#if DEBUG_ACCELEROMETER
-    if (is_time_pass(&time, 3000UL)) {
+    if (is_time_pass(&time, DEBUG_TIME_PASS)) {
         Serial.println("----- Steps -----");
         Serial.print("current: ");
         Serial.print(steps);
         Serial.print(", current res: ");
         Serial.println(result);
-        time_passed = true;
+        set_time(&time);
     }
 #endif
 

@@ -1,9 +1,10 @@
 #include "Arduino.h"
 #include <HardwareSerial.h>
+
 #define DEBUG_ECHOCARDIOGRAM_MODULE 1
 
-int lo_plus = -1;
-int lo_neg = -1;
+static int lo_plus = -1;
+static int lo_neg = -1;
 
 void Echocardiogram_module_setup(int plus, int neg) {
   #if DEBUG_ECHOCARDIOGRAM_MODULE

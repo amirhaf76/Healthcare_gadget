@@ -9,10 +9,10 @@
 #define PIN_RX    11
 #define SIM808_BUFFER_SIZE 1024
 
-SoftwareSerial mySerial(PIN_TX,PIN_RX);
-DFRobot_SIM808 sim808(&mySerial);//Connect RX,TX,PWR,
+static SoftwareSerial mySerial(PIN_TX,PIN_RX);
+static DFRobot_SIM808 sim808(&mySerial);//Connect RX,TX,PWR,
 
-char buffer[SIM808_BUFFER_SIZE];
+static char buffer[SIM808_BUFFER_SIZE];
 
 bool setup_simModule() {
   mySerial.begin(9600);
@@ -46,10 +46,9 @@ bool setup_simModule() {
   return true;
 }
 
-void send_sms(char * phone_number, char * message) 
+bool send_sms(char * phone_number, char * message) 
 {
   bool res = sim808.sendSMS(phone_number,message); 
-  
 
   #if SIM_DEBUG
 		Serial.print("phone_number: ");
@@ -58,6 +57,8 @@ void send_sms(char * phone_number, char * message)
 		Serial.println(message);
     Serial.println((res) ? "Message sent." : "Message failed.");
 	#endif
+
+  return res;
 }
 
 bool gps_setup() {
@@ -75,7 +76,7 @@ bool gps_setup() {
   return res;
 }
 
-bool get_GPS_data() {
+bool get_GPS_data(DFRobot_SIM808::gspdata& gpsData) {
 	 //************** Get GPS data *******************
 	 bool status = sim808.getGPS();
    if (status) {
@@ -125,7 +126,9 @@ bool get_GPS_data() {
     //************* Turn off the GPS power ************
     sim808.detachGPS();
 
-	}
+	} 
+  
+  gpsData = sim808.GPSdata;
 
 	return status;
 }

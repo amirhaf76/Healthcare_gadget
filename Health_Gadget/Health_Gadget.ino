@@ -76,7 +76,7 @@
 #include "health_helper.h"
 #include "Echocardiogram_module.h"
 #include "Thermometer_module.h"
-#include "Accelerometer_module.h"
+#include "Accelerometer_module.hh"
 #include "SD_module.h"
 #include "HRB_OX_module.h"
 #include "SimModule.h"
@@ -257,7 +257,7 @@ void run_module(enum Controller c) {
   switch(c) {
     case HRB_OX_MODULE:
       #if !FLOW_TESTING
-      HRB_OX_module_wakeup(); 
+      //HRB_OX_module_wakeup(); 
 
       set_time(&myTime);
       lcd.clear();
@@ -267,7 +267,7 @@ void run_module(enum Controller c) {
 
       while (!is_time_pass(&myTime, HRB_OX_TIME))
       {
-        HRB_OX_module_loop_step_new();
+        //HRB_OX_module_loop_step_new();
       }
 
       
@@ -278,7 +278,7 @@ void run_module(enum Controller c) {
       lcd.print(", ");
       lcd.print(avg_bt);
 
-      HRB_OX_module_shotdown();
+      //HRB_OX_module_shotdown();
       
       delay(2000);
       #else
@@ -412,7 +412,7 @@ void setup() {
 
   #if !FLOW_TESTING
   accelerometer_setup(XPIN, YPIN, ZPIN);
-  HRB_OX_module_setup_at_first();
+  //HRB_OX_module_setup_at_first();
   #endif
 }
 
@@ -523,14 +523,14 @@ void lcd_show(LCDController lcd_controller) {
   }
 }
 
-void set_time(unsigned long * time_set) {
-  *time_set = millis();
-}
+// void set_time(unsigned long * time_set) {
+//   *time_set = millis();
+// }
 
-bool is_time_pass(unsigned long * time_set, unsigned long during) {
+// bool is_time_pass(unsigned long * time_set, unsigned long during) {
 
-  return (millis() - *time_set) >= during || (millis() - *time_set) < 0;
-}
+//   return (millis() - *time_set) >= during || (millis() - *time_set) < 0;
+// }
 
 /* todo: 
 	control
