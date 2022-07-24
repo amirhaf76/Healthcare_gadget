@@ -1,45 +1,55 @@
 #include <DFRobot_SIM808.h>
 #include <SoftwareSerial.h>
 #include <sim808.h>
+#include "address_and_keys.h"
 
 #define SIM_DEBUG 1
 
 #define PIN_TX    10
 #define PIN_RX    11
-#define SIM808_BUFFER_SIZE 512
+#define SIM808_BUFFER_SIZE 1024
 
 SoftwareSerial mySerial(PIN_TX,PIN_RX);
 DFRobot_SIM808 sim808(&mySerial);//Connect RX,TX,PWR,
 
-char http_cmd[] = "GET /media/uploads/mbed_official/hello.txt HTTP/1.0\r\n\r\n";
 char buffer[SIM808_BUFFER_SIZE];
 
-int8_t setup_simModule() {
+bool setup_simModule() {
   mySerial.begin(9600);
 
   #if SIM_DEBUG
   Serial.begin(9600);
+  Serial.println("start sim808");
+  delay(1000);
   #endif
-
+  while (!Serial.available());
+  Serial.print("Sim808\r\n");
   uint8_t counter = 0;
 
   while(!sim808.init()) { 
 		delay(1000);
 
-		#if SIM_DEBUG
+		//#if SIM_DEBUG
 		Serial.print("Sim808 init error\r\n");
-		#endif
+		//#endif
 
     if ((counter++) == 5)
-      return -1;
+      return false;
   }
 
-  return 0;
+  #if SIM_DEBUG
+  Serial.begin(9600);
+  Serial.println("sim808 initiated successfuly");
+  delay(1000);
+  #endif
+
+  return true;
 }
 
 void send_sms(char * phone_number, char * message) 
 {
   bool res = sim808.sendSMS(phone_number,message); 
+  
 
   #if SIM_DEBUG
 		Serial.print("phone_number: ");
@@ -132,9 +142,14 @@ int has_signal() {
   return power;
 }
 
-bool send_data(char * http_str, int siz_http_str) {
+bool send_data() {
   
-  int8_t counter = 5;
+  delay(4000);
+  Serial.println("sending data start");
+  int8_t counter = 0;
+  bool stat;
+
+
   //*********** Attempt DHCP *******************
   while(!sim808.join(F("cmnet"))) {
 
@@ -146,22 +161,30 @@ bool send_data(char * http_str, int siz_http_str) {
 
     delay(2000);
   }
-
+  #if SIM_DEBUG
+    Serial.println("Sim808 join successfully");
+    #endif
+  delay(2000);
   //************ Successful DHCP ****************
   #if SIM_DEBUG
   Serial.print("IP Address is ");
   Serial.println(sim808.getIPAddress());
   #endif
+  delay(2000);
 
+Serial.println("connecting");
   //*********** Establish a TCP connection ************
-  if(!sim808.connect(TCP,"mbed.org", 80)) {
+  stat = sim808.connect(TCP, THING_SPEAK_HOST, 80);
+  if(stat) {
     #if SIM_DEBUG
-    Serial.println("Connect error");
+    Serial.println("Connect success");
     #endif
   }else{
     #if SIM_DEBUG
-    Serial.println("Connect mbed.org success");
+    Serial.println("Connect error");
     #endif
+    sim808.disconnect();
+    return false;
   }
 
   //*********** Send a GET request *****************
@@ -169,34 +192,45 @@ bool send_data(char * http_str, int siz_http_str) {
   Serial.println("waiting to fetch...");
   #endif
 
-  sim808.send(http_str, sizeof(siz_http_str)-1);
+  char http_cmd[] = GET_METHOD(THING_SPEAK_HOST, UPDATE_GET_API,
+    QUERY_PARAMS(API_KEY, field2, 23, "2022-12-2T08:40"));
 
-  while (true) {
-    int ret = sim808.recv(buffer, SIM808_BUFFER_SIZE-1);
+  #if SIM_DEBUG
+    Serial.println(http_cmd);
+  #endif  
     
-    if (ret <= 0){
+  sim808.send(http_cmd, sizeof(http_cmd)-1);
 
-      #if SIM_DEBUG
-      Serial.println("fetch over...");
-      #endif  
+  counter = 0;
+   while (counter++ < 5) {
+     int ret = sim808.recv(buffer, SIM808_BUFFER_SIZE-1);
+    
+     if (ret <= 0){
 
-      break; 
-    }
-    buffer[ret] = '\0';
+       #if SIM_DEBUG
+       Serial.println("fetch over...");
+       #endif  
 
-    #if SIM_DEBUG
-    Serial.print("Recv: ");
-    Serial.print(ret);
-    Serial.print(" bytes: ");
-    Serial.println(buffer);
-    #endif
+       break; 
+     }
+     buffer[ret] = '\0';
 
-    break;
-  }
+     #if SIM_DEBUG
+     Serial.print("Recv: ");
+     Serial.print(ret);
+     Serial.print(" bytes: ");
+     Serial.println(buffer);
+     #endif
+
+     break;
+   }
 
   //************* Close TCP or UDP connections **********
   sim808.close();
 
   //*** Disconnect wireless connection, Close Moving Scene *******
   sim808.disconnect();
+  #if SIM_DEBUG
+    Serial.println("Sim808 disconnect");
+    #endif
 }
