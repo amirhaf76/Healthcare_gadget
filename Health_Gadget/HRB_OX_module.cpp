@@ -3,6 +3,7 @@
 #include "spo2_algorithm.h"
 #include "heartRate.h"
 #include "health_helper.h"
+#include "time_controlling.hh"
 
 #include "HRB_OX_module.h"
 
@@ -63,7 +64,7 @@ void HRBandO2Module::dumpSamples() {
 }
 
 
-void HRBandO2Module::heart_beat_measurement_config_setup() 
+void HRBandO2Module::heartBeatConfigSetup() 
 {
   particleSensor.setup();
   particleSensor.setPulseAmplitudeRed(0x0A); //Turn Red LED to low to indicate sensor is running
@@ -75,7 +76,7 @@ void HRBandO2Module::heart_beat_measurement_config_setup()
 }
 
 
-void HRBandO2Module::heart_beat_measurement_step_loop() 
+void HRBandO2Module::heartBeatStepLoop() 
 {
   long irValue = particleSensor.getIR();
 
@@ -203,14 +204,17 @@ bool HRBandO2Module::spo2LoopStepLoop(bool dumping=false)
   return true;
 }
 
+void HRBandO2Module::spo2Loop() {
+  spo2Loop(2000LU);
+}
 
-void HRBandO2Module::spo2Loop() 
+void HRBandO2Module::spo2Loop(unsigned long duration) 
 {
   unsigned long inital_timer;
   set_time(&inital_timer);
 
   bool first_step = true;
-  while (!is_time_pass(&inital_timer, 20000LU))
+  while (!is_time_pass(&inital_timer, duration))
   { 
     if (first_step) 
     {
@@ -231,7 +235,7 @@ void HRBandO2Module::spo2Loop()
 }
 
 
-int HRBandO2Module::GetSpo2(bool * isValidSpo2) 
+int HRBandO2Module::getSpo2(bool * isValidSpo2) 
 {
   
   *isValidSpo2 = validSPO2;
@@ -239,7 +243,7 @@ int HRBandO2Module::GetSpo2(bool * isValidSpo2)
 }
 
 
-int HRBandO2Module::GetAveHeartRadio() 
+int HRBandO2Module::getAveHeartRadio() 
 {
   return beatAvg;
 }

@@ -18,13 +18,14 @@ class HRBandO2Module {
         
         void spo2ConfigSetUp();
         void spo2Loop();
+        void spo2Loop(unsigned long duration);
 
-        void heart_beat_measurement_config_setup();
-        void heart_beat_measurement_step_loop();
+        void heartBeatConfigSetup();
+        void heartBeatStepLoop();
 
 
-        int GetAveHeartRadio();
-        int GetSpo2(bool * isValidSpo2 = nullptr);
+        int getAveHeartRadio();
+        int getSpo2(bool * isValidSpo2 = nullptr);
 
         void wakeup();        
         void shotDown();
