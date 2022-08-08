@@ -20,6 +20,15 @@ enum Controller {
     NONE_MODULE,
 };
 
+typedef struct
+{
+    double temperature;
+    int o2_measure;
+    int avg_bpm = 0;
+    unsigned char echo_result_index;
+    unsigned long int steps;
+} RecordData;
+
 typedef struct {
     float x;
     float y;

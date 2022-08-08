@@ -1,86 +1,85 @@
 #include <DFRobot_SIM808.h>
 #include <SoftwareSerial.h>
 #include <sim808.h>
-#include "address_and_keys.h"
+#include "address_and_api.h"
 
-#define SIM_DEBUG 1
+#define SIM_DEBUG 0
 
-#define PIN_TX    10
-#define PIN_RX    11
+#define PIN_TX 10
+#define PIN_RX 11
 #define SIM808_BUFFER_SIZE 1024
 
-static SoftwareSerial mySerial(PIN_TX,PIN_RX);
-static DFRobot_SIM808 sim808(&mySerial);//Connect RX,TX,PWR,
+static SoftwareSerial mySerial(PIN_TX, PIN_RX);
+static DFRobot_SIM808 sim808(&mySerial); // Connect RX,TX,PWR,
 
 static char buffer[SIM808_BUFFER_SIZE];
 
-bool setup_simModule() {
+bool setup_sim_module()
+{
   mySerial.begin(9600);
-
-  #if SIM_DEBUG
   Serial.begin(9600);
+
+#if SIM_DEBUG
   Serial.println("start sim808");
-  delay(1000);
-  #endif
-  while (!Serial.available());
-  Serial.print("Sim808\r\n");
+#endif
+
   uint8_t counter = 0;
 
-  while(!sim808.init()) { 
-		delay(1000);
-
-		//#if SIM_DEBUG
-		Serial.print("Sim808 init error\r\n");
-		//#endif
+  while (!sim808.init())
+  {
+#if SIM_DEBUG
+    Serial.print("Sim808 init error\r\n");
+#endif
 
     if ((counter++) == 5)
       return false;
+
+    delay(1000);
   }
 
-  #if SIM_DEBUG
-  Serial.begin(9600);
+#if SIM_DEBUG
   Serial.println("sim808 initiated successfuly");
-  delay(1000);
-  #endif
+#endif
 
   return true;
 }
 
-bool send_sms(char * phone_number, char * message) 
+bool send_sms(char *phone_number, char *message)
 {
-  bool res = sim808.sendSMS(phone_number,message); 
+  bool res = sim808.sendSMS(phone_number, message);
 
-  #if SIM_DEBUG
-		Serial.print("phone_number: ");
-		Serial.print(phone_number);
-		Serial.print(", message: ");
-		Serial.println(message);
-    Serial.println((res) ? "Message sent." : "Message failed.");
-	#endif
+#if SIM_DEBUG
+  Serial.print("phone_number: ");
+  Serial.print(phone_number);
+  Serial.print(", message: ");
+  Serial.println(message);
+  Serial.println((res) ? "Message sent." : "Message failed.");
+#endif
 
   return res;
 }
 
-bool gps_setup() {
-
+bool gps_setup()
+{
   //************* Turn on the GPS power************
   bool res = sim808.attachGPS();
 
-	#if SIM_DEBUG
-  if(res)
-      Serial.println("Open the GPS power success");
-  else 
-      Serial.println("Open the GPS power failure");
-	#endif
-  
+#if SIM_DEBUG
+  if (res)
+    Serial.println("Open the GPS power success");
+  else
+    Serial.println("Open the GPS power failure");
+#endif
+
   return res;
 }
 
-bool get_GPS_data(DFRobot_SIM808::gspdata& gpsData) {
-	 //************** Get GPS data *******************
-	 bool status = sim808.getGPS();
-   if (status) {
-		#if SIM_DEBUG
+bool get_gps_data(char * date, float * lat, float * lon)
+{
+  //************** Get GPS data *******************
+  if (sim808.getGPS())
+  {
+#if SIM_DEBUG
     Serial.print(sim808.GPSdata.year);
     Serial.print("/");
     Serial.print(sim808.GPSdata.month);
@@ -94,146 +93,183 @@ bool get_GPS_data(DFRobot_SIM808::gspdata& gpsData) {
     Serial.print(sim808.GPSdata.second);
     Serial.print(":");
     Serial.println(sim808.GPSdata.centisecond);
-    
+
     Serial.print("latitude :");
-    Serial.println(sim808.GPSdata.lat,6);
-    
+    Serial.println(sim808.GPSdata.lat, 6);
+
     sim808.latitudeConverToDMS();
     Serial.print("latitude :");
     Serial.print(sim808.latDMS.degrees);
     Serial.print("^");
     Serial.print(sim808.latDMS.minutes);
     Serial.print("\'");
-    Serial.print(sim808.latDMS.seconeds,6);
+    Serial.print(sim808.latDMS.seconeds, 6);
     Serial.println("\"");
     Serial.print("longitude :");
-    Serial.println(sim808.GPSdata.lon,6);
+    Serial.println(sim808.GPSdata.lon, 6);
     sim808.LongitudeConverToDMS();
     Serial.print("longitude :");
     Serial.print(sim808.longDMS.degrees);
     Serial.print("^");
     Serial.print(sim808.longDMS.minutes);
     Serial.print("\'");
-    Serial.print(sim808.longDMS.seconeds,6);
+    Serial.print(sim808.longDMS.seconeds, 6);
     Serial.println("\"");
-    
+
     Serial.print("speed_kph :");
     Serial.println(sim808.GPSdata.speed_kph);
     Serial.print("heading :");
     Serial.println(sim808.GPSdata.heading);
-		#endif
+#endif
+
+    sprintf(date, "%4d-%2d-%2dT%2d:%2d", //12 + 4= 16
+            sim808.GPSdata.year,
+            sim808.GPSdata.month,
+            sim808.GPSdata.day,
+            sim808.GPSdata.hour,
+            sim808.GPSdata.minute,
+            sim808.GPSdata.second);
+
+    *lat = sim808.GPSdata.lat;
+    *lon = sim808.GPSdata.lon;
 
     //************* Turn off the GPS power ************
     sim808.detachGPS();
 
-	} 
-  
-  gpsData = sim808.GPSdata;
+    return true;
+  }
 
-	return status;
+  //************* Turn off the GPS power ************
+  sim808.detachGPS();
+  
+  sprintf(date, "");
+
+  *lat = -1;
+  *lon = -1;
+
+  return false;
 }
 
-int has_signal() {
+
+int has_signal()
+{
   int power;
   sim808.getSignalStrength(&power);
 
-  #if SIM_DEBUG
+#if SIM_DEBUG
   Serial.print("Signal Strength: ");
   Serial.println(power);
-  #endif
+#endif
 
   return power;
 }
 
-bool send_data() {
+bool send_data() 
+{
   
-  delay(4000);
-  Serial.println("sending data start");
-  int8_t counter = 0;
-  bool stat;
+}
 
+bool send_data(char * http_cmd)
+{
+  delay(4000);
+
+#if SIM_DEBUG
+  Serial.println("sending data start");
+#endif
+
+  int8_t counter = 0;
+  bool status;
 
   //*********** Attempt DHCP *******************
-  while(!sim808.join(F("cmnet"))) {
-
-    #if SIM_DEBUG
+  while (!sim808.join(F("cmnet")))
+  {
+#if SIM_DEBUG
     Serial.println("Sim808 join network error");
-    #endif
-    
-    if (counter++ == 5) return false;
+#endif
+
+    if (counter++ == 5)
+      return false;
 
     delay(2000);
   }
-  #if SIM_DEBUG
-    Serial.println("Sim808 join successfully");
-    #endif
-  delay(2000);
-  //************ Successful DHCP ****************
-  #if SIM_DEBUG
-  Serial.print("IP Address is ");
-  Serial.println(sim808.getIPAddress());
-  #endif
+
+#if SIM_DEBUG
+  Serial.println("Sim808 join successfully");
+#endif
+
   delay(2000);
 
-Serial.println("connecting");
+//************ Successful DHCP ****************
+#if SIM_DEBUG
+  Serial.print("IP Address is ");
+  Serial.println(sim808.getIPAddress());
+  Serial.println("connecting");
+#endif
+  delay(2000);
+
   //*********** Establish a TCP connection ************
-  stat = sim808.connect(TCP, THING_SPEAK_HOST, 80);
-  if(stat) {
-    #if SIM_DEBUG
+  status = sim808.connect(TCP, THING_SPEAK_HOST, 80);
+  if (status)
+  {
+#if SIM_DEBUG
     Serial.println("Connect success");
-    #endif
-  }else{
-    #if SIM_DEBUG
+#endif
+  }
+  else
+  {
+#if SIM_DEBUG
     Serial.println("Connect error");
-    #endif
+#endif
     sim808.disconnect();
     return false;
   }
 
-  //*********** Send a GET request *****************
-  #if SIM_DEBUG
+//*********** Send a GET request *****************
+#if SIM_DEBUG
   Serial.println("waiting to fetch...");
-  #endif
+#endif
+  // char http_cmd[] = GET_METHOD(THING_SPEAK_HOST, UPDATE_GET_API,
+  //                              QUERY_PARAMS(API_KEY, "o", 23, "2022-12-2T08:40"));
 
-  char http_cmd[] = GET_METHOD(THING_SPEAK_HOST, UPDATE_GET_API,
-    QUERY_PARAMS(API_KEY, field2, 23, "2022-12-2T08:40"));
+#if SIM_DEBUG
+  Serial.println(http_cmd);
+#endif
 
-  #if SIM_DEBUG
-    Serial.println(http_cmd);
-  #endif  
-    
-  sim808.send(http_cmd, sizeof(http_cmd)-1);
+  sim808.send(http_cmd, sizeof(http_cmd) - 1);
 
   counter = 0;
-   while (counter++ < 5) {
-     int ret = sim808.recv(buffer, SIM808_BUFFER_SIZE-1);
-    
-     if (ret <= 0){
+  while (counter++ < 5)
+  {
+    int ret = sim808.recv(buffer, SIM808_BUFFER_SIZE - 1);
 
-       #if SIM_DEBUG
-       Serial.println("fetch over...");
-       #endif  
+    if (ret <= 0)
+    {
 
-       break; 
-     }
-     buffer[ret] = '\0';
+#if SIM_DEBUG
+      Serial.println("fetch over...");
+#endif
 
-     #if SIM_DEBUG
-     Serial.print("Recv: ");
-     Serial.print(ret);
-     Serial.print(" bytes: ");
-     Serial.println(buffer);
-     #endif
+      break;
+    }
+    buffer[ret] = '\0';
 
-     break;
-   }
+#if SIM_DEBUG
+    Serial.print("Recv: ");
+    Serial.print(ret);
+    Serial.print(" bytes: ");
+    Serial.println(buffer);
+#endif
+
+    break;
+  }
 
   //************* Close TCP or UDP connections **********
   sim808.close();
 
   //*** Disconnect wireless connection, Close Moving Scene *******
   sim808.disconnect();
-  #if SIM_DEBUG
-    Serial.println("Sim808 disconnect");
-    #endif
+
+#if SIM_DEBUG
+  Serial.println("Sim808 disconnect");
+#endif
 }
