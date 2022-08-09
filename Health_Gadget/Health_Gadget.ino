@@ -17,7 +17,7 @@
 // It is for debugging program.
 #define DEBUG 1
 #define SERIAL_STATUS 1
-#define FLOW_TESTING 0
+#define FLOW_TESTING 1
 
 /* Global Variables */
 #define PIN_ECHO_CONTROLLER 22
@@ -59,13 +59,12 @@
 #define RS 31
 #define LCD_EN 33
 
-#define LCD_CONTROLLER_COUNTS 7
+#define LCD_CONTROLLER_COUNTS 8
 
 enum LCDController
 {
   HRB_SCREEN,
   O2_SCREEN,
-  HRB_OX_SCREEN,
   TEMPERATURE_SCREEN,
   ECHOCARDIOGRAM_SCREEN,
   STEPS_SCREEN,
@@ -76,12 +75,19 @@ enum LCDController
 };
 
 static LCDController current_state = HOME_SCREEN;
-static Controller c = NONE_MODULE;
+static Controller current_controller = NONE_MODULE;
 static LiquidCrystal lcd(RS, LCD_EN, D4, D5, D6, D7);
 
-unsigned long int duration_times[] = {NORMAL_SAMPELING, ECHO_SAMPELING};
+enum Plan
+{
+  NORMAL_SAMPELING_PLAN,
+  ECHO_SAMPELING_PLAN
+};
+
+Plan planIds[PLANNING_COUNT] = {NORMAL_SAMPELING_PLAN, ECHO_SAMPELING_PLAN};
+unsigned long int duration_times[PLANNING_COUNT] = {NORMAL_SAMPELING, ECHO_SAMPELING};
 unsigned long int set_up_times[PLANNING_COUNT];
-int8_t planning_indexes[PLANNING_COUNT];
+int8_t planning_indexes[PLANNING_COUNT] = {-1, -1};
 
 HRBandO2Module hrb;
 
@@ -109,11 +115,15 @@ int avg_bpm = 0;
 void switch_module(enum Controller c);
 void change();
 void run_module(enum Controller c);
-void run_processes();
+void run_pip();
 void lcd_setup();
 void lcd_show_and_change_controller(LCDController lcd_controller);
 void controller();
 void send_data_to_server();
+void run_hrb_module();
+void run_o2_module();
+void run_temperature_module();
+void run_echocardiogram_module();
 
 // Setup
 void setup()
@@ -123,7 +133,7 @@ void setup()
   Serial.begin(9600);
 #endif
 
-  assert(c == NONE_MODULE);
+  assert(current_controller == NONE_MODULE);
   assert(current_state == HOME_SCREEN);
 
   lcd_setup();
@@ -147,7 +157,7 @@ void setup()
 
 #if !FLOW_TESTING
   accelerometer_setup(XPIN, YPIN, ZPIN);
-  hrb.setUpModule();
+  
 #endif
 
   set_times(PLANNING_COUNT, set_up_times);
@@ -157,6 +167,39 @@ void setup()
 void loop()
 {
   check_times(PLANNING_COUNT, set_up_times, duration_times, planning_indexes);
+
+  for (int i = 0; i < PLANNING_COUNT; i++)
+  {
+    if (planning_indexes[i])
+    {
+      switch (planIds[i])
+      {
+      case NORMAL_SAMPELING_PLAN:
+        // run_pip(HRB_MODULE);
+
+        // run_pip(O2_MODULE);
+
+        // run_pip(TEMPERATURE_MODULE);
+
+        // send_data_to_server("hrb", avg_bpm);
+        
+        
+        break;
+      case ECHO_SAMPELING_PLAN:
+        // run_pip(ECHOCARDIOGRAM_MODULE);
+
+        break;
+      }
+    }
+    #if 0
+    Serial.print("[");
+    Serial.print(i);
+    Serial.print("] planning_indexes: ");
+    Serial.print(planning_indexes[i]);
+    Serial.print(", planIds: ");
+    Serial.println(planIds[i]);
+    #endif
+  }
 
   controller();
 
@@ -276,167 +319,30 @@ void run_module(enum Controller c)
 
   switch (c)
   {
-
   case HRB_MODULE:
-#if !FLOW_TESTING
-    hrb.wakeup();
-
-    hrb.heartBeatConfigSetup();
-
-    lcd.clear();
-    lcd.print("HRB_OX_MODUL");
-    lcd.setCursor(0, 1);
-    lcd.print("is runnig");
-
-    while (!is_time_pass(&myTime, HRB_TIME))
-    {
-      hrb.heartBeatStepLoop();
-    }
-    avg_bpm = hrb.getAveHeartRadio();
-
-    lcd.clear();
-    lcd.print("AVG BPM");
-    lcd.setCursor(0, 1);
-    lcd.print(avg_bpm);
-
-    hrb.shotDown();
-
-    delay(2000);
-#else
-    lcd.clear();
-    lcd.print("HRB_OX_MODUL");
-    lcd.setCursor(0, 1);
-    lcd.print("is runnig");
-    delay(2000);
-#endif
-
+    run_hrb_module();
     break;
-
   case O2_MODULE:
-#if !FLOW_TESTING
-    hrb.wakeup();
-    hrb.spo2ConfigSetUp();
-
-    lcd.clear();
-    lcd.print("HRB_OX_MODUL");
-    lcd.setCursor(0, 1);
-    lcd.print("is runnig");
-
-    hrb.spo2Loop(O2_TIME);
-
-    o2_measure = hrb.getSpo2(&is_o2_valid);
-
-    lcd.clear();
-    lcd.print("O2 measure");
-    lcd.setCursor(0, 1);
-    lcd.print(o2_measure);
-    lcd.print("%");
-
-    hrb.shotDown();
-
-    delay(2000);
-#else
-    lcd.clear();
-    lcd.print("HRB_OX_MODUL");
-    lcd.setCursor(0, 1);
-    lcd.print("is runnig");
-    delay(2000);
-#endif
-
+    run_o2_module();
     break;
 
   case TEMPERATURE_MODULE:
-#if !FLOW_TESTING
-    Thermometer_module_setup();
-
-    counter = 0;
-    temperature = 0;
-    set_time(&myTime);
-    while (!is_time_pass(&myTime, BODY_TEMP_TIME))
-    {
-      Thermometer_module_loop_step();
-      temperature += Thermometer_get_temperature();
-      ++counter;
-    }
-    ave_temperature = temperature / counter;
-
-    lcd.clear();
-    lcd.print("TEMPERATURE:");
-    lcd.setCursor(0, 1);
-    lcd.print(ave_temperature, 2);
-    lcd.print("c, ");
-    lcd.print(ave_temperature + 10, 2);
-    lcd.print("c");
-    delay(5000);
-#else
-    lcd.clear();
-    lcd.print("TEMPERATURE");
-    lcd.setCursor(0, 1);
-    lcd.print("is runnig");
-    delay(2000);
-#endif
-
+    run_temperature_module();
     break;
 
   case ECHOCARDIOGRAM_MODULE:
-#if !FLOW_TESTING
-    Echocardiogram_module_setup(LO_PLUS, LO_NEG);
-    lcd.clear();
-    lcd.print("ECHO");
-    lcd.setCursor(0, 1);
-    lcd.print("is runnig");
-
-    echo_result_index = 0;
-    file_index = 0;
-    file_name_temp[0] = '\0';
-
-    sprintf(file_name_temp, "file_num_%i.csv", file_index++);
-    set_time(&myTime);
-
-    while (!is_time_pass(&myTime, ECHO_CARDIO_TIME))
-    {
-      echo_results[echo_result_index++] = Echocardiogram_module_loop_step();
-
-      if (echo_result_index == 100)
-      {
-        echo_status = echo_status || create_csv_file(echo_results, echo_result_index, file_name_temp);
-        echo_result_index = 0;
-        delay(1000);
-      }
-    }
-    if (echo_result_index != 0)
-    {
-      echo_status = echo_status || create_csv_file(echo_results, echo_result_index, file_name_temp);
-      echo_result_index = 0;
-    }
-
-    if (echo_status)
-    {
-      lcd.clear();
-      lcd.print("Echo done");
-      lcd.setCursor(0, 1);
-      lcd.print("correctly");
-    }
-    delay(2000);
-#else
-    lcd.clear();
-    lcd.print("EXHOCARDIOGRAM");
-    lcd.setCursor(0, 1);
-    lcd.print("is runnig");
-    delay(2000);
-#endif
-
+    run_echocardiogram_module();
     break;
+
   case NONE_MODULE:
     lcd.clear();
     lcd.print("NONE_MODULE.");
-
   default:
     break;
   }
 }
 
-void run_processes()
+void run_pip(enum Controller c)
 {
   change();
   switch_module(c);
@@ -454,32 +360,30 @@ void lcd_show_and_change_controller(LCDController lcd_controller)
   switch (lcd_controller)
   {
   case HRB_SCREEN:
-    c = HRB_MODULE;
+    current_controller = HRB_MODULE;
     lcd.clear();
-    lcd.print("HRB_OX_SCREEN");
     //---1---2---3---4
-    //   HRB and O2
+    //      HRB       
     //<<   Select   >>
-    lcd.print("   HRB and O2   ");
+    lcd.print("      HRB       ");
     lcd.setCursor(0, 1);
     lcd.print("<<   Select   >>");
     Serial.println("HRB_OX_SCREEN");
     break;
 
   case O2_SCREEN:
-    c = O2_MODULE;
+    current_controller = O2_MODULE;
     lcd.clear();
-    lcd.print("HRB_OX_SCREEN");
     //---1---2---3---4
-    //   HRB and O2
+    //       O2       
     //<<   Select   >>
-    lcd.print("   HRB and O2   ");
+    lcd.print("       O2       ");
     lcd.setCursor(0, 1);
     lcd.print("<<   Select   >>");
     Serial.println("HRB_OX_SCREEN");
     break;
   case TEMPERATURE_SCREEN:
-    c = TEMPERATURE_MODULE;
+    current_controller = TEMPERATURE_MODULE;
     lcd.clear();
     //---1---2---3---4
     //   Temperature
@@ -491,7 +395,7 @@ void lcd_show_and_change_controller(LCDController lcd_controller)
     break;
 
   case ECHOCARDIOGRAM_SCREEN:
-    c = ECHOCARDIOGRAM_MODULE;
+    current_controller = ECHOCARDIOGRAM_MODULE;
     lcd.clear();
     //---1---2---3---4
     //      Echo
@@ -502,7 +406,7 @@ void lcd_show_and_change_controller(LCDController lcd_controller)
     Serial.println("ECHOCARDIOGRAM_SCREEN");
     break;
   case STEPS_SCREEN:
-    c = ACCELEROMETER_MODULE;
+    current_controller = ACCELEROMETER_MODULE;
     lcd.clear();
     //---1---2---3---4
     //  Step Counter
@@ -522,7 +426,7 @@ void lcd_show_and_change_controller(LCDController lcd_controller)
     break;
 
   case HOME_SCREEN:
-    c = NONE_MODULE;
+    current_controller = NONE_MODULE;
     lcd.clear();
     //---1---2---3---4
     //      Home
@@ -533,7 +437,7 @@ void lcd_show_and_change_controller(LCDController lcd_controller)
     Serial.println("HOME_SCREEN");
     break;
   case SAMPELLING_TIME_SCREEN:
-    c = NONE_MODULE;
+    current_controller = NONE_MODULE;
     lcd.clear();
     //---1---2---3---4
     // Next Sampling:
@@ -544,7 +448,7 @@ void lcd_show_and_change_controller(LCDController lcd_controller)
     Serial.println("SAMPELLING_TIME_SCREEN");
     break;
   case SMS_SCREEN:
-    c = NONE_MODULE;
+    current_controller = NONE_MODULE;
     lcd.clear();
     //---1---2---3---4
     //      SMS
@@ -556,7 +460,8 @@ void lcd_show_and_change_controller(LCDController lcd_controller)
     break;
   default:
     lcd.clear();
-    lcd.println("Error in");
+    lcd.print("Error in");
+    lcd.setCursor(0,1);
     lcd.print("lcd show");
     Serial.println("Error in lcd show");
     break;
@@ -606,7 +511,7 @@ void controller()
 
     lcd_show_and_change_controller(current_state);
 
-    run_processes();
+    run_pip(current_controller);
 
     lcd_show_and_change_controller(current_state);
     delay(1500);
@@ -671,6 +576,207 @@ bool send_data_to_server(char *field_name, int value)
 
   return false;
 }
+
+bool send_data_to_server(char *field_name, char * value)
+{
+  char buffer[400];
+  char query_params[200] = "";
+
+  if (prepare_request(buffer, query_params))
+  {
+    add_ampersand(query_params);
+    add_params_and_value(query_params, field_name, value);
+
+    create_request(buffer, get_request_line, UPDATE_GET_API, query_params, THING_SPEAK_HOST);
+
+    send_data(buffer);
+
+    return true;
+  }
+
+  return false;
+}
+
+bool send_data_to_server(char *field_name, float value)
+{
+  char buffer[400];
+  char query_params[200] = "";
+
+  if (prepare_request(buffer, query_params))
+  {
+    add_ampersand(query_params);
+    add_params_and_value(query_params, field_name, value);
+
+    create_request(buffer, get_request_line, UPDATE_GET_API, query_params, THING_SPEAK_HOST);
+
+    send_data(buffer);
+
+    return true;
+  }
+
+  return false;
+}
+
+void run_hrb_module()
+{
+  unsigned long int myTime;
+
+#if !FLOW_TESTING
+  hrb.setUpModule();
+
+  hrb.wakeup();
+
+  hrb.heartBeatConfigSetup();
+
+  lcd.clear();
+  lcd.print("HRB_OX_MODUL");
+  lcd.setCursor(0, 1);
+  lcd.print("is runnig");
+
+  while (!is_time_pass(&myTime, HRB_TIME))
+  {
+    hrb.heartBeatStepLoop();
+  }
+  avg_bpm = hrb.getAveHeartRadio();
+
+  lcd.clear();
+  lcd.print("AVG BPM");
+  lcd.setCursor(0, 1);
+  lcd.print(avg_bpm);
+
+  hrb.shotDown();
+
+  delay(2000);
+#else
+  lcd.clear();
+  lcd.print("HRB_OX_MODUL");
+  lcd.setCursor(0, 1);
+  lcd.print("is runnig");
+  delay(2000);
+#endif
+}
+
+void run_o2_module()
+{
+#if !FLOW_TESTING
+  hrb.wakeup();
+  hrb.spo2ConfigSetUp();
+
+  lcd.clear();
+  lcd.print("HRB_OX_MODUL");
+  lcd.setCursor(0, 1);
+  lcd.print("is runnig");
+
+  hrb.spo2Loop(O2_TIME);
+
+  o2_measure = hrb.getSpo2(&is_o2_valid);
+
+  lcd.clear();
+  lcd.print("O2 measure");
+  lcd.setCursor(0, 1);
+  lcd.print(o2_measure);
+  lcd.print("%");
+
+  hrb.shotDown();
+
+  delay(2000);
+#else
+  lcd.clear();
+  lcd.print("HRB_OX_MODUL");
+  lcd.setCursor(0, 1);
+  lcd.print("is runnig");
+  delay(2000);
+#endif
+}
+
+void run_temperature_module()
+{
+  int8_t counter = 0;
+  unsigned long int myTime;
+
+#if !FLOW_TESTING
+  Thermometer_module_setup();
+
+  temperature = 0;
+  set_time(&myTime);
+  while (!is_time_pass(&myTime, BODY_TEMP_TIME))
+  {
+    Thermometer_module_loop_step();
+    temperature += Thermometer_get_temperature();
+    ++counter;
+  }
+  ave_temperature = temperature / counter;
+
+  lcd.clear();
+  lcd.print("TEMPERATURE:");
+  lcd.setCursor(0, 1);
+  lcd.print(ave_temperature, 2);
+  lcd.print("c, ");
+  lcd.print(ave_temperature + 10, 2);
+  lcd.print("c");
+  delay(5000);
+#else
+  lcd.clear();
+  lcd.print("TEMPERATURE");
+  lcd.setCursor(0, 1);
+  lcd.print("is runnig");
+  delay(2000);
+#endif
+}
+
+void run_echocardiogram_module()
+{
+  unsigned long myTime;
+  bool echo_status = false;
+
+#if !FLOW_TESTING
+  Echocardiogram_module_setup(LO_PLUS, LO_NEG);
+  lcd.clear();
+  lcd.print("ECHO");
+  lcd.setCursor(0, 1);
+  lcd.print("is runnig");
+
+  echo_result_index = 0;
+  file_index = 0;
+  file_name_temp[0] = '\0';
+
+  sprintf(file_name_temp, "file_num_%i.csv", file_index++);
+  set_time(&myTime);
+
+  while (!is_time_pass(&myTime, ECHO_CARDIO_TIME))
+  {
+    echo_results[echo_result_index++] = Echocardiogram_module_loop_step();
+
+    if (echo_result_index == 100)
+    {
+      echo_status = echo_status || create_csv_file(echo_results, echo_result_index, file_name_temp);
+      echo_result_index = 0;
+      delay(1000);
+    }
+  }
+  if (echo_result_index != 0)
+  {
+    echo_status = echo_status || create_csv_file(echo_results, echo_result_index, file_name_temp);
+    echo_result_index = 0;
+  }
+
+  if (echo_status)
+  {
+    lcd.clear();
+    lcd.print("Echo done");
+    lcd.setCursor(0, 1);
+    lcd.print("correctly");
+  }
+  delay(2000);
+#else
+  lcd.clear();
+  lcd.print("EXHOCARDIOGRAM");
+  lcd.setCursor(0, 1);
+  lcd.print("is runnig");
+  delay(2000);
+#endif
+}
+
 /* todo:
   control
   GPS,
