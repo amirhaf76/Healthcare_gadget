@@ -4,21 +4,7 @@
 #include <math.h>
 #include <stdlib.h>
 
-#define CONTROLLERS_NUMBERS 6
 
-enum Controller {
-    /** 
-     * Number of controllers should be
-     * matched with Macro CONTROLLERS_NUMBERS.
-     */
-    HRB_MODULE,
-    O2_MODULE,
-    TEMPERATURE_MODULE, 
-    ACCELEROMETER_MODULE, 
-    SD_MODULE, 
-    ECHOCARDIOGRAM_MODULE,
-    NONE_MODULE,
-};
 
 typedef struct
 {

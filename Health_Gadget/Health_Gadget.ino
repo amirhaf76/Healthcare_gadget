@@ -16,8 +16,9 @@
 
 // It is for debugging program.
 #define DEBUG 1
+#define TESTING_SCREEN 1
 #define SERIAL_STATUS 1
-#define FLOW_TESTING 1
+#define FLOW_TESTING 0
 
 /* Global Variables */
 #define PIN_ECHO_CONTROLLER 22
@@ -32,8 +33,8 @@
 
 // Planning
 #define PLANNING_COUNT 2
-#define NORMAL_SAMPELING 2 * 3600 * 1000LU
-#define ECHO_SAMPELING 6 * 3600 * 1000LU
+#define NORMAL_SAMPELING 2 * 1 * 1000LU
+#define ECHO_SAMPELING 3 * 1 * 1000LU
 // end Planning
 
 // Echo_cardio_module
@@ -59,10 +60,17 @@
 #define RS 31
 #define LCD_EN 33
 
+#if TESTING_SCREEN
+#define LCD_CONTROLLER_COUNTS 12
+#else
 #define LCD_CONTROLLER_COUNTS 8
+#endif
 
 enum LCDController
 {
+  /** Notice: !!!!!
+   *  LCD_CONTROLLER_COUNTS must be checked.
+   */
   HRB_SCREEN,
   O2_SCREEN,
   TEMPERATURE_SCREEN,
@@ -71,7 +79,40 @@ enum LCDController
   HOME_SCREEN,
   SAMPELLING_TIME_SCREEN,
   SMS_SCREEN,
-  // Notice: LCD_CONTROLLER_COUNTS must be checked.
+#if TESTING_SCREEN
+  SMS_SCREEN_TESTING,
+  GPS_SCREEN_TESTING,
+  CALLING_API_SCREEN_TESTING,
+  SD_SCREEN_TESTING,
+#endif
+};
+
+#if TESTING_SCREEN
+#define CONTROLLERS_NUMBERS 12
+#else
+#define CONTROLLERS_NUMBERS 8
+#endif
+
+enum Controller
+{
+  /**
+   * Number of controllers should be
+   * matched with Macro CONTROLLERS_NUMBERS.
+   */
+  HRB_MODULE,
+  O2_MODULE,
+  TEMPERATURE_MODULE,
+  ACCELEROMETER_MODULE,
+  ECHOCARDIOGRAM_MODULE,
+  NONE_MODULE,
+  SAMPELLING_TIME,
+  SMS_SENDING,
+#if TESTING_SCREEN
+  SMS_TESTING,
+  GPS_TESTING,
+  CALLING_API_TESTING,
+  SD_TESTING,
+#endif
 };
 
 static LCDController current_state = HOME_SCREEN;
@@ -124,6 +165,10 @@ void run_hrb_module();
 void run_o2_module();
 void run_temperature_module();
 void run_echocardiogram_module();
+void test_sms();
+void test_gps();
+void test_api();
+void test_sd();
 
 // Setup
 void setup()
@@ -157,7 +202,7 @@ void setup()
 
 #if !FLOW_TESTING
   accelerometer_setup(XPIN, YPIN, ZPIN);
-  
+
 #endif
 
   set_times(PLANNING_COUNT, set_up_times);
@@ -170,7 +215,7 @@ void loop()
 
   for (int i = 0; i < PLANNING_COUNT; i++)
   {
-    if (planning_indexes[i])
+    if (planning_indexes[i] == 0)
     {
       switch (planIds[i])
       {
@@ -182,23 +227,22 @@ void loop()
         // run_pip(TEMPERATURE_MODULE);
 
         // send_data_to_server("hrb", avg_bpm);
-        
-        
+
         break;
       case ECHO_SAMPELING_PLAN:
         // run_pip(ECHOCARDIOGRAM_MODULE);
 
         break;
       }
+#if 1
+      Serial.print("[");
+      Serial.print(i);
+      Serial.print("] planning_indexes: ");
+      Serial.print(planning_indexes[i]);
+      Serial.print(", planIds: ");
+      Serial.println(planIds[i]);
+#endif
     }
-    #if 0
-    Serial.print("[");
-    Serial.print(i);
-    Serial.print("] planning_indexes: ");
-    Serial.print(planning_indexes[i]);
-    Serial.print(", planIds: ");
-    Serial.println(planIds[i]);
-    #endif
   }
 
   controller();
@@ -278,6 +322,8 @@ void switch_module(enum Controller c)
 
   default:
 #if DEBUG
+    lcd.clear();
+    lcd.print("Switch None");
     Serial.println("Switch None");
 #endif
 
@@ -322,6 +368,7 @@ void run_module(enum Controller c)
   case HRB_MODULE:
     run_hrb_module();
     break;
+
   case O2_MODULE:
     run_o2_module();
     break;
@@ -333,6 +380,25 @@ void run_module(enum Controller c)
   case ECHOCARDIOGRAM_MODULE:
     run_echocardiogram_module();
     break;
+
+#if TESTING_SCREEN
+  case SMS_TESTING:
+    test_sms();
+    break;
+
+  case GPS_TESTING:
+    test_gps();
+    break;
+
+  case CALLING_API_TESTING:
+    test_api();
+    break;
+
+  case SD_TESTING:
+    test_sd();
+    break;
+
+#endif
 
   case NONE_MODULE:
     lcd.clear();
@@ -363,7 +429,7 @@ void lcd_show_and_change_controller(LCDController lcd_controller)
     current_controller = HRB_MODULE;
     lcd.clear();
     //---1---2---3---4
-    //      HRB       
+    //      HRB
     //<<   Select   >>
     lcd.print("      HRB       ");
     lcd.setCursor(0, 1);
@@ -375,7 +441,7 @@ void lcd_show_and_change_controller(LCDController lcd_controller)
     current_controller = O2_MODULE;
     lcd.clear();
     //---1---2---3---4
-    //       O2       
+    //       O2
     //<<   Select   >>
     lcd.print("       O2       ");
     lcd.setCursor(0, 1);
@@ -436,6 +502,7 @@ void lcd_show_and_change_controller(LCDController lcd_controller)
     lcd.print("<<   Choose   >>");
     Serial.println("HOME_SCREEN");
     break;
+
   case SAMPELLING_TIME_SCREEN:
     current_controller = NONE_MODULE;
     lcd.clear();
@@ -447,6 +514,7 @@ void lcd_show_and_change_controller(LCDController lcd_controller)
     lcd.print("<<   time     >>");
     Serial.println("SAMPELLING_TIME_SCREEN");
     break;
+
   case SMS_SCREEN:
     current_controller = NONE_MODULE;
     lcd.clear();
@@ -458,10 +526,58 @@ void lcd_show_and_change_controller(LCDController lcd_controller)
     lcd.print("<<    Send    >>");
     Serial.println("SMS_SCREEN");
     break;
+
+#if TESTING_SCREEN
+  case SMS_SCREEN_TESTING:
+    current_controller = SMS_TESTING;
+    lcd.clear();
+    //---1---2---3---4
+    //  SMS Testing
+    //<<    Test    >>
+    lcd.print("  SMS Testing   ");
+    lcd.setCursor(0, 1);
+    lcd.print("<<    Test    >>");
+    Serial.println("SMS_SCREEN_TESTING");
+    break;
+  case GPS_SCREEN_TESTING:
+    current_controller = GPS_TESTING;
+    lcd.clear();
+    //---1---2---3---4
+    //  GPS Testing
+    //<<    Test    >>
+    lcd.print("  GPS Testing   ");
+    lcd.setCursor(0, 1);
+    lcd.print("<<    Test    >>");
+    Serial.println("GPS_SCREEN_TESTING");
+    break;
+  case CALLING_API_SCREEN_TESTING:
+    current_controller = CALLING_API_TESTING;
+    lcd.clear();
+    //---1---2---3---4
+    //   API Testing
+    //<<    Test    >>
+    lcd.print("   API Testing  ");
+    lcd.setCursor(0, 1);
+    lcd.print("<<    Test    >>");
+    Serial.println("CALLING_API_SCREEN_TESTING");
+    break;
+  case SD_SCREEN_TESTING:
+    current_controller = SD_TESTING;
+    lcd.clear();
+    //---1---2---3---4
+    //    SD Tesing
+    //<<    Test    >>
+    lcd.print("    SD Tesing   ");
+    lcd.setCursor(0, 1);
+    lcd.print("<<    Test    >>");
+    Serial.println("SD_SCREEN_TESTING");
+    break;
+#endif
+
   default:
     lcd.clear();
     lcd.print("Error in");
-    lcd.setCursor(0,1);
+    lcd.setCursor(0, 1);
     lcd.print("lcd show");
     Serial.println("Error in lcd show");
     break;
@@ -577,7 +693,7 @@ bool send_data_to_server(char *field_name, int value)
   return false;
 }
 
-bool send_data_to_server(char *field_name, char * value)
+bool send_data_to_server(char *field_name, char *value)
 {
   char buffer[400];
   char query_params[200] = "";
@@ -775,6 +891,69 @@ void run_echocardiogram_module()
   lcd.print("is runnig");
   delay(2000);
 #endif
+}
+
+void test_sms()
+{
+  setup_sim_module();
+
+  bool res = send_sms("09121067991", "Testing sms.");
+  Serial.print(res);
+  lcd.clear();
+  //---1---2---3---4
+  lcd.print("  09121067991   ");
+  lcd.setCursor(0, 1);
+  lcd.print(res==true ? "   Successful   " : "  Unsuccessful  ");
+  Serial.println("test_sms");
+}
+
+void test_gps()
+{
+  setup_sim_module();
+
+  gps_setup();
+
+  char date[20];
+  float lan;
+  float lon;
+
+  bool res = get_gps_data(date, &lan, &lon);
+
+  //---1---2---3---4
+  lcd.clear();
+  lcd.print(date);
+  delay(3000);
+  lcd.clear();
+  lcd.print(lan);
+  lcd.setCursor(0, 1);
+  lcd.print(lon);
+  Serial.println("test_gps");
+}
+
+void test_api()
+{
+  setup_sim_module();
+
+  bool res = send_data_to_server("f", 1);
+
+  lcd.clear();
+           //---1---2---3---4
+  lcd.print("  API Testing  ");
+  lcd.setCursor(0, 1);
+  lcd.print(res ? "   Successful   " : "  Unsuccessful  ");
+  Serial.println("test_api");
+}
+
+void test_sd()
+{
+  bool res = make_file_ready();
+  
+  lcd.clear();
+           //---1---2---3---4
+  lcd.print("   SD Testing  ");
+  lcd.setCursor(0, 1);
+  lcd.print(res ? "   Successful   " : "  Unsuccessful  ");
+  Serial.println("test_api");
 }
 
 /* todo:
