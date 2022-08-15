@@ -156,7 +156,7 @@ int avg_bpm = 0;
 void switch_module(enum Controller c);
 void change();
 void run_module(enum Controller c);
-void run_pip();
+void run_pip(enum Controller c);
 void lcd_setup();
 void lcd_show_and_change_controller(LCDController lcd_controller);
 void controller();
@@ -748,7 +748,7 @@ void run_hrb_module()
   lcd.print("HRB_OX_MODUL");
   lcd.setCursor(0, 1);
   lcd.print("is runnig");
-
+  set_time(&myTime);
   while (!is_time_pass(&myTime, HRB_TIME))
   {
     hrb.heartBeatStepLoop();
