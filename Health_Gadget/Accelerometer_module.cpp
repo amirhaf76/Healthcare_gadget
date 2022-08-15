@@ -54,7 +54,7 @@ void accelerometer_loop_step()
     diff.y = temporary_point.y - current_point.y;
     diff.z = temporary_point.z - current_point.z;
 
-    double result = noiseFilter(magnitude_calculated(diff), CF);
+    double result = noiseFilter(calculate_magnitude(diff), CF);
 
     current_point = temporary_point;
 
