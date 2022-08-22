@@ -2,7 +2,7 @@
 #include "Arduino.h"
 #include "time_controlling.hh"
 
-#define DEBUG_ACCELEROMETER 1
+#define DEBUG_ACCELEROMETER 0
 #define DEBUG_TIME_PASS 3000UL
 
 #define MAX_BOUND 30

@@ -28,7 +28,7 @@
 #define ECHO_CARDIO_TIME 5000
 #define BODY_TEMP_TIME 5000
 #define HRB_OX_TIME 5000
-#define O2_TIME 15000
+#define O2_TIME 30000
 #define HRB_TIME 15000
 
 // Planning
@@ -160,6 +160,7 @@ void run_pip(enum Controller c);
 void lcd_setup();
 void lcd_show_and_change_controller(LCDController lcd_controller);
 void controller();
+void check_actions();
 void send_data_to_server();
 void run_hrb_module();
 void run_o2_module();
@@ -211,8 +212,19 @@ void setup()
 // Loop
 void loop()
 {
+  controller();
+
   check_times(PLANNING_COUNT, set_up_times, duration_times, planning_indexes);
 
+  check_actions();
+
+#if !FLOW_TESTING
+  accelerometer_loop_step();
+#endif
+}
+
+void check_actions() 
+{
   for (int i = 0; i < PLANNING_COUNT; i++)
   {
     if (planning_indexes[i] == 0)
@@ -234,7 +246,7 @@ void loop()
 
         break;
       }
-#if 1
+#if 0
       Serial.print("[");
       Serial.print(i);
       Serial.print("] planning_indexes: ");
@@ -244,12 +256,6 @@ void loop()
 #endif
     }
   }
-
-  controller();
-
-#if !FLOW_TESTING
-  accelerometer_loop_step();
-#endif
 }
 
 void switch_module(enum Controller c)
@@ -434,7 +440,7 @@ void lcd_show_and_change_controller(LCDController lcd_controller)
     lcd.print("      HRB       ");
     lcd.setCursor(0, 1);
     lcd.print("<<   Select   >>");
-    Serial.println("HRB_OX_SCREEN");
+    Serial.println("HRB_MODULE");
     break;
 
   case O2_SCREEN:
@@ -446,7 +452,7 @@ void lcd_show_and_change_controller(LCDController lcd_controller)
     lcd.print("       O2       ");
     lcd.setCursor(0, 1);
     lcd.print("<<   Select   >>");
-    Serial.println("HRB_OX_SCREEN");
+    Serial.println("O2_MODULE");
     break;
   case TEMPERATURE_SCREEN:
     current_controller = TEMPERATURE_MODULE;
@@ -478,17 +484,13 @@ void lcd_show_and_change_controller(LCDController lcd_controller)
     //  Step Counter
     //<<   Select   >>
     lcd.print("  Step Counter  ");
+    // char buffer[16] = "<<   ";
     lcd.setCursor(0, 1);
-    lcd.print("<<   ");
-    // unsigned long step = accelerometer_get_steps();
-    // int8_t step_num_len = 5 - num_len(step);
-    // lcd.print(step);
-    // for (int8_t i = 0; i < step_num_len; i++)
-    // {
-    //   lcd.print(" ");
-    // }
-    lcd.print("   >>");
-    Serial.println("steps");
+    // lcd.print("<<   ");
+    // sprintf(buffer+5, "%6lf", accelerometer_get_steps());
+    lcd.print(accelerometer_get_steps());
+    
+
     break;
 
   case HOME_SCREEN:
@@ -603,7 +605,7 @@ void controller()
 #endif
 
     lcd_show_and_change_controller(current_state);
-    delay(1500);
+    delay(1000);
   }
   else if (left_button == LOW)
   {
@@ -616,7 +618,7 @@ void controller()
 #endif
 
     lcd_show_and_change_controller(current_state);
-    delay(1500);
+    delay(1000);
   }
   else if (select_button == LOW)
   {
@@ -630,7 +632,7 @@ void controller()
     run_pip(current_controller);
 
     lcd_show_and_change_controller(current_state);
-    delay(1500);
+    delay(1000);
   }
 
   if (current_state == STEPS_SCREEN)
@@ -745,7 +747,7 @@ void run_hrb_module()
   hrb.heartBeatConfigSetup();
 
   lcd.clear();
-  lcd.print("HRB_OX_MODUL");
+  lcd.print("hrb ");
   lcd.setCursor(0, 1);
   lcd.print("is runnig");
   set_time(&myTime);
@@ -774,15 +776,19 @@ void run_hrb_module()
 
 void run_o2_module()
 {
+ 
 #if !FLOW_TESTING
+  hrb.setUpModule();
+
   hrb.wakeup();
+
   hrb.spo2ConfigSetUp();
 
   lcd.clear();
-  lcd.print("HRB_OX_MODUL");
+  lcd.print("O2");
   lcd.setCursor(0, 1);
   lcd.print("is runnig");
-
+  
   hrb.spo2Loop(O2_TIME);
 
   o2_measure = hrb.getSpo2(&is_o2_valid);
@@ -828,8 +834,8 @@ void run_temperature_module()
   lcd.setCursor(0, 1);
   lcd.print(ave_temperature, 2);
   lcd.print("c, ");
-  lcd.print(ave_temperature + 10, 2);
-  lcd.print("c");
+  // lcd.print(ave_temperature + 10, 2);
+  // lcd.print("c");
   delay(5000);
 #else
   lcd.clear();
@@ -846,7 +852,7 @@ void run_echocardiogram_module()
   bool echo_status = false;
 
 #if !FLOW_TESTING
-  Echocardiogram_module_setup(LO_PLUS, LO_NEG);
+  Echocardiogram_module_setup(LO_PLUS, LO_NEG, A0);
   lcd.clear();
   lcd.print("ECHO");
   lcd.setCursor(0, 1);
@@ -932,9 +938,8 @@ void test_gps()
 
 void test_api()
 {
-  setup_sim_module();
 
-  bool res = send_data_to_server("f", 1);
+  bool res = send_data_to_server("field5", 1);
 
   lcd.clear();
            //---1---2---3---4
@@ -942,6 +947,7 @@ void test_api()
   lcd.setCursor(0, 1);
   lcd.print(res ? "   Successful   " : "  Unsuccessful  ");
   Serial.println("test_api");
+  delay(3000);
 }
 
 void test_sd()
@@ -954,6 +960,7 @@ void test_sd()
   lcd.setCursor(0, 1);
   lcd.print(res ? "   Successful   " : "  Unsuccessful  ");
   Serial.println("test_api");
+  delay(3000);
 }
 
 /* todo:

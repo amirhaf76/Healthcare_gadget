@@ -10,12 +10,6 @@
 #define UPDATE_GET_API "update"
 #define UPDATE_POST_CSV_API(chanel_num) "channels/" #chanel_num "/bulk_update.csv"
 
-// Qurey params.
-#define QUERY_PARAMS(api_key, field_name,  field_value, created_at_value) \
-		"api_key=" api_key "&" \
-		field_name "=" #field_value "&" \
-		"created_at=" created_at_value
-
 #define API_KEY_PARAM "api_key=%s"
 #define DATE_PARAM "created_at=%s"
 
@@ -24,11 +18,6 @@
 
 #define HOST_HEADER "Host: %s\r\n"
 #define REQ_END "\r\n"
-
-// Get methods.
-#define GET_METHOD(host, api, query_params) \
-		"GET /" api "?" query_params " HTTP/1.1 \r\n" \
-		"Host: " host "\r\n\r\n"
 
 int get_request_line(char * buffer, const char * api, const char * query_params);
 int post_request_line(char * buffer, const char * api, const char * query_params);

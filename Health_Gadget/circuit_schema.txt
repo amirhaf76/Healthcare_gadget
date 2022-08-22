@@ -1,6 +1,6 @@
  MAX30205 as body temperature:
  Module 	  | Arduino Board
- --------------+--------------
+ -------------+--------------
  vcc 		  | 5v or 3.3 v
  GND 		  | ground
  SDA		  | 20 or SDA
@@ -20,7 +20,7 @@
 
  ADXL335 as Accelerator Meter:
  Module 	  | Arduino Board
- --------------+--------------
+--------------+--------------
  vcc 		  | 3.3 v
  GND 		  | ground
  x	  	      | A1
@@ -29,7 +29,7 @@
 
  AD8232 as Echocardiography:
  Module 	  | Arduino Board
- --------------+--------------
+ -------------+--------------
  vcc 		  | 3.3 v
  GND 		  | ground
  output	      | A0
@@ -39,7 +39,7 @@
 
  SD Module:
  Module 	  | Arduino Board
- --------------+--------------
+ -------------+--------------
  vcc 		  | 3.3 v
  GND 	  	  | ground
  CS		      | 53
@@ -49,7 +49,7 @@
 
  Liquid Cristal:
  Name         | Pin
- --------------+--------------
+ -------------+--------------
  VSS          | Ground
  VCC          | 5V
  RS           | 31

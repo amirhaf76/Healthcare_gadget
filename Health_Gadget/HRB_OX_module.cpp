@@ -193,7 +193,7 @@ bool HRBandO2Module::spo2LoopStepLoop(bool dumping=false)
       Serial.print(F("red="));
       Serial.print(redBuffer[i], DEC);
       Serial.print(F(", ir="));
-      Serial.print(irBuffer[i], DEC);
+      Serial.println(irBuffer[i], DEC);
       #endif
   }
 
@@ -205,7 +205,7 @@ bool HRBandO2Module::spo2LoopStepLoop(bool dumping=false)
 }
 
 void HRBandO2Module::spo2Loop() {
-  spo2Loop(2000LU);
+  spo2Loop(20000LU);
 }
 
 void HRBandO2Module::spo2Loop(unsigned long duration) 
@@ -213,6 +213,7 @@ void HRBandO2Module::spo2Loop(unsigned long duration)
   unsigned long inital_timer;
   set_time(&inital_timer);
 
+  Serial.println("dddddd");
   bool first_step = true;
   while (!is_time_pass(&inital_timer, duration))
   { 

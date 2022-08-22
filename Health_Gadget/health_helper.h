@@ -23,7 +23,7 @@ typedef struct {
 
 
 double noiseFilter(double x,float cf);
-double magnitude_calculated(Point p);
+double calculate_magnitude(Point p);
 double calculate_mean(const int siz, const double arr[], int* err);
 int bandWithFilter(double x, int min_val, int max_val);
 int find_local_max(const int siz, const double arr[], double min_value);

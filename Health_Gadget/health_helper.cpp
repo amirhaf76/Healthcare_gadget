@@ -3,7 +3,7 @@
 // #include "Arduino.h"
 
 
-double magnitude_calculated(Point p) {
+double calculate_magnitude(Point p) {
     return sqrt(
             pow(p.x, 2.0) +
             pow(p.y, 2.0) +

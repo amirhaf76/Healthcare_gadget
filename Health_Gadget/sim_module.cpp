@@ -1,9 +1,9 @@
 #include <DFRobot_SIM808.h>
 #include <SoftwareSerial.h>
-#include <sim808.h>
+#include "time_controlling.hh"
 #include "address_and_api.h"
 
-#define SIM_DEBUG 0
+#define SIM_DEBUG 1
 
 #define PIN_TX 10
 #define PIN_RX 11
@@ -74,74 +74,80 @@ bool gps_setup()
   return res;
 }
 
-bool get_gps_data(char * date, float * lat, float * lon)
+bool get_gps_data(char *date, float *lat, float *lon)
 {
   //************** Get GPS data *******************
-  if (sim808.getGPS())
+  unsigned long int time;
+
+  set_time(&time);
+  while (!is_time_pass(&time, 10000))
   {
+    if (sim808.getGPS())
+    {
 #if SIM_DEBUG
-    Serial.print(sim808.GPSdata.year);
-    Serial.print("/");
-    Serial.print(sim808.GPSdata.month);
-    Serial.print("/");
-    Serial.print(sim808.GPSdata.day);
-    Serial.print(" ");
-    Serial.print(sim808.GPSdata.hour);
-    Serial.print(":");
-    Serial.print(sim808.GPSdata.minute);
-    Serial.print(":");
-    Serial.print(sim808.GPSdata.second);
-    Serial.print(":");
-    Serial.println(sim808.GPSdata.centisecond);
+      Serial.print(sim808.GPSdata.year);
+      Serial.print("/");
+      Serial.print(sim808.GPSdata.month);
+      Serial.print("/");
+      Serial.print(sim808.GPSdata.day);
+      Serial.print(" ");
+      Serial.print(sim808.GPSdata.hour);
+      Serial.print(":");
+      Serial.print(sim808.GPSdata.minute);
+      Serial.print(":");
+      Serial.print(sim808.GPSdata.second);
+      Serial.print(":");
+      Serial.println(sim808.GPSdata.centisecond);
 
-    Serial.print("latitude :");
-    Serial.println(sim808.GPSdata.lat, 6);
+      Serial.print("latitude :");
+      Serial.println(sim808.GPSdata.lat, 6);
 
-    sim808.latitudeConverToDMS();
-    Serial.print("latitude :");
-    Serial.print(sim808.latDMS.degrees);
-    Serial.print("^");
-    Serial.print(sim808.latDMS.minutes);
-    Serial.print("\'");
-    Serial.print(sim808.latDMS.seconeds, 6);
-    Serial.println("\"");
-    Serial.print("longitude :");
-    Serial.println(sim808.GPSdata.lon, 6);
-    sim808.LongitudeConverToDMS();
-    Serial.print("longitude :");
-    Serial.print(sim808.longDMS.degrees);
-    Serial.print("^");
-    Serial.print(sim808.longDMS.minutes);
-    Serial.print("\'");
-    Serial.print(sim808.longDMS.seconeds, 6);
-    Serial.println("\"");
+      sim808.latitudeConverToDMS();
+      Serial.print("latitude :");
+      Serial.print(sim808.latDMS.degrees);
+      Serial.print("^");
+      Serial.print(sim808.latDMS.minutes);
+      Serial.print("\'");
+      Serial.print(sim808.latDMS.seconeds, 6);
+      Serial.println("\"");
+      Serial.print("longitude :");
+      Serial.println(sim808.GPSdata.lon, 6);
+      sim808.LongitudeConverToDMS();
+      Serial.print("longitude :");
+      Serial.print(sim808.longDMS.degrees);
+      Serial.print("^");
+      Serial.print(sim808.longDMS.minutes);
+      Serial.print("\'");
+      Serial.print(sim808.longDMS.seconeds, 6);
+      Serial.println("\"");
 
-    Serial.print("speed_kph :");
-    Serial.println(sim808.GPSdata.speed_kph);
-    Serial.print("heading :");
-    Serial.println(sim808.GPSdata.heading);
+      Serial.print("speed_kph :");
+      Serial.println(sim808.GPSdata.speed_kph);
+      Serial.print("heading :");
+      Serial.println(sim808.GPSdata.heading);
 #endif
 
-    sprintf(date, "%4d-%2d-%2dT%2d:%2d", //12 + 4= 16
-            sim808.GPSdata.year,
-            sim808.GPSdata.month,
-            sim808.GPSdata.day,
-            sim808.GPSdata.hour,
-            sim808.GPSdata.minute,
-            sim808.GPSdata.second);
+      sprintf(date, "%4d-%d-%dT%d:%d", // 12 + 4= 16
+              sim808.GPSdata.year,
+              sim808.GPSdata.month,
+              sim808.GPSdata.day,
+              sim808.GPSdata.hour,
+              sim808.GPSdata.minute,
+              sim808.GPSdata.second);
 
-    *lat = sim808.GPSdata.lat;
-    *lon = sim808.GPSdata.lon;
+      *lat = sim808.GPSdata.lat;
+      *lon = sim808.GPSdata.lon;
 
-    //************* Turn off the GPS power ************
-    sim808.detachGPS();
+      //************* Turn off the GPS power ************
+      sim808.detachGPS();
 
-    return true;
+      return true;
+    }
   }
 
   //************* Turn off the GPS power ************
   sim808.detachGPS();
-  
+
   sprintf(date, "");
 
   *lat = -1;
@@ -149,7 +155,6 @@ bool get_gps_data(char * date, float * lat, float * lon)
 
   return false;
 }
-
 
 int has_signal()
 {
@@ -164,12 +169,11 @@ int has_signal()
   return power;
 }
 
-bool send_data() 
+bool send_data()
 {
-  
 }
 
-bool send_data(char * http_cmd)
+bool send_data(char *http_cmd)
 {
   delay(4000);
 
@@ -228,8 +232,6 @@ bool send_data(char * http_cmd)
 #if SIM_DEBUG
   Serial.println("waiting to fetch...");
 #endif
-  // char http_cmd[] = GET_METHOD(THING_SPEAK_HOST, UPDATE_GET_API,
-  //                              QUERY_PARAMS(API_KEY, "o", 23, "2022-12-2T08:40"));
 
 #if SIM_DEBUG
   Serial.println(http_cmd);

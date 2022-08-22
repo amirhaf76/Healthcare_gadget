@@ -2,7 +2,7 @@
 #include "Arduino.h"
 #include "time_controlling.hh"
 
-#define DEBUG_TIME_CONTROLLING 1
+#define DEBUG_TIME_CONTROLLING 0
 
 void check_times(int8_t siz, unsigned long *set_up_times, unsigned long *duration_times, int8_t *indexes)
 {
