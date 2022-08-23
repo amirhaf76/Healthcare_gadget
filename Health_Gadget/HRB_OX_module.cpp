@@ -70,13 +70,15 @@ void HRBandO2Module::heartBeatConfigSetup()
   particleSensor.setPulseAmplitudeRed(0x0A); //Turn Red LED to low to indicate sensor is running
   particleSensor.setPulseAmplitudeGreen(0); //Turn off Green LED
 
+  beatAvg = 0;
+
   #if DEBUG
   Serial.println(F("MAX30105 heart beat configuration is set."));
   #endif
 }
 
 
-void HRBandO2Module::heartBeatStepLoop() 
+float HRBandO2Module::heartBeatStepLoop() 
 {
   long irValue = particleSensor.getIR();
 
@@ -114,6 +116,8 @@ void HRBandO2Module::heartBeatStepLoop()
 
   Serial.println();
   #endif
+
+  return beatsPerMinute;
 }
 
 
@@ -211,10 +215,11 @@ void HRBandO2Module::spo2Loop() {
 void HRBandO2Module::spo2Loop(unsigned long duration) 
 {
   unsigned long inital_timer;
-  set_time(&inital_timer);
-
-  Serial.println("dddddd");
   bool first_step = true;
+
+  set_time(&inital_timer);
+  int32_t sum_spo2 = 0;
+  int8_t counter = 0;
   while (!is_time_pass(&inital_timer, duration))
   { 
     if (first_step) 
@@ -226,13 +231,21 @@ void HRBandO2Module::spo2Loop(unsigned long duration)
       spo2LoopStepLoop(true);
     }
     #if DEBUG
-      Serial.print(F(", SPO2="));
+      Serial.print(F("=========SPO2="));
       Serial.print(spo2, DEC);
 
       Serial.print(F(", SPO2Valid="));
       Serial.println(validSPO2, DEC);
     #endif
+
+    if (validSPO2 == 1)
+    {
+      sum_spo2 += spo2;
+      counter++;
+    }
   }
+
+  spo2 = (int32_t) (sum_spo2 / counter);
 }
 
 

@@ -29,7 +29,7 @@
 #define BODY_TEMP_TIME 5000
 #define HRB_OX_TIME 5000
 #define O2_TIME 30000
-#define HRB_TIME 15000
+#define HRB_TIME 30000
 
 // Planning
 #define PLANNING_COUNT 2
@@ -742,7 +742,7 @@ void run_hrb_module()
 #if !FLOW_TESTING
   hrb.setUpModule();
 
-  hrb.wakeup();
+  // hrb.wakeup();
 
   hrb.heartBeatConfigSetup();
 
@@ -750,10 +750,15 @@ void run_hrb_module()
   lcd.print("hrb ");
   lcd.setCursor(0, 1);
   lcd.print("is runnig");
+  lcd.clear();
   set_time(&myTime);
   while (!is_time_pass(&myTime, HRB_TIME))
   {
-    hrb.heartBeatStepLoop();
+    float temp = hrb.heartBeatStepLoop();
+    lcd.print("Heart Beat Rate:");
+    lcd.setCursor(0, 1);
+    lcd.print(temp);
+    lcd.setCursor(0, 0);
   }
   avg_bpm = hrb.getAveHeartRadio();
 
@@ -830,10 +835,10 @@ void run_temperature_module()
   ave_temperature = temperature / counter;
 
   lcd.clear();
-  lcd.print("TEMPERATURE:");
+  lcd.print("Temperature:");
   lcd.setCursor(0, 1);
   lcd.print(ave_temperature, 2);
-  lcd.print("c, ");
+  lcd.print("c");
   // lcd.print(ave_temperature + 10, 2);
   // lcd.print("c");
   delay(5000);
@@ -939,7 +944,7 @@ void test_gps()
 void test_api()
 {
 
-  bool res = send_data_to_server("field5", 1);
+  bool res = send_data_to_server("field6", 1);
 
   lcd.clear();
            //---1---2---3---4

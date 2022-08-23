@@ -21,7 +21,7 @@ class HRBandO2Module {
         void spo2Loop(unsigned long duration);
 
         void heartBeatConfigSetup();
-        void heartBeatStepLoop();
+        float heartBeatStepLoop();
 
 
         int getAveHeartRadio();
@@ -41,8 +41,8 @@ class HRBandO2Module {
         int beatAvg;
 
         // ----- SPO2 -----
-        int32_t spo2; //SPO2 value
-        int8_t validSPO2; //indicator to show if the SPO2 calculation is valid
+        int32_t spo2 = 0; //SPO2 value
+        int8_t validSPO2 = 0; //indicator to show if the SPO2 calculation is valid
 
         #if defined(__AVR_ATmega328P__) || defined(__AVR_ATmega168__)
         //Arduino Uno doesn't have enough SRAM to store 100 samples of IR led data and red led data in 32-bit format
