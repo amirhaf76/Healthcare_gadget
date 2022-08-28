@@ -28,8 +28,8 @@
 #define ECHO_CARDIO_TIME 5000
 #define BODY_TEMP_TIME 5000
 #define HRB_OX_TIME 5000
-#define O2_TIME 30000
-#define HRB_TIME 30000
+#define O2_TIME 60000
+#define HRB_TIME 60000
 
 // Planning
 #define PLANNING_COUNT 2
@@ -46,7 +46,7 @@
 #define SELECT_BUTTON 5
 #define RIGHT_BUTTON 4
 
-// SD
+// SDw
 #define CS 53
 #define MOSI 51
 #define MISO 50
@@ -938,7 +938,11 @@ void test_gps()
   lcd.print(lan);
   lcd.setCursor(0, 1);
   lcd.print(lon);
-  Serial.println("test_gps");
+
+  Serial.println(date);
+  Serial.println(lan);
+  Serial.println(lon);
+  
 }
 
 void test_api()
@@ -967,12 +971,3 @@ void test_sd()
   Serial.println("test_api");
   delay(3000);
 }
-
-/* todo:
-  control
-  GPS,
-  sending data,
-  Database,
-  saving data for no connection,
-  test,
-*/

@@ -80,7 +80,7 @@ bool get_gps_data(char *date, float *lat, float *lon)
   unsigned long int time;
 
   set_time(&time);
-  while (!is_time_pass(&time, 10000))
+  while (!is_time_pass(&time, 30000))
   {
     if (sim808.getGPS())
     {
