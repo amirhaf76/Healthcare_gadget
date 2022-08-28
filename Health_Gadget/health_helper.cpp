@@ -1,8 +1,9 @@
 #include "health_helper.h"
 #include "math.h"
+// #include "Arduino.h"
 
 
-double magnitude_calculated(Point p) {
+double calculate_magnitude(Point p) {
     return sqrt(
             pow(p.x, 2.0) +
             pow(p.y, 2.0) +
@@ -10,6 +11,16 @@ double magnitude_calculated(Point p) {
     );
 }
 
+int num_len(unsigned long num) {
+    int len = 1;
+
+    while(((unsigned long)num / 10) > 0) {
+        num = (unsigned long) num / 10;
+        len++;
+    }
+    
+    return len;
+}
 
 /* cf: coefficient of filter
  * x: input
@@ -90,3 +101,12 @@ double find_max(const int siz, const double arr[]) {
 
   return max_num;
 }
+
+// void set_time(unsigned long * time_set) {
+//   *time_set = millis();
+// }
+
+// bool is_time_pass(unsigned long * time_set, unsigned long during) 
+// {
+//   return (millis() - *time_set) >= during || (millis() - *time_set) < 0;
+// }

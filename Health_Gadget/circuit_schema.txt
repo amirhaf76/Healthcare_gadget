@@ -1,0 +1,74 @@
+ MAX30205 as body temperature:
+ Module 	  | Arduino Board
+ -------------+--------------
+ vcc 		  | 5v or 3.3 v
+ GND 		  | ground
+ SDA		  | 20 or SDA
+ SCL		  | 21 or SCL
+
+ Module controller: pin 24
+
+ MAX30102 as Oxi meter:
+ Module 	  | Arduino Board
+--------------+--------------
+ vcc 	  	  | 3.3 v
+ GND   		  | ground
+ SDA		  | SDA or 20
+ SCL		  | SCL or 21
+
+ Module controller: pin 26
+
+ ADXL335 as Accelerator Meter:
+ Module 	  | Arduino Board
+--------------+--------------
+ vcc 		  | 3.3 v
+ GND 		  | ground
+ x	  	      | A1
+ y		      | A2
+ z	    	  | A3
+
+ AD8232 as Echocardiography:
+ Module 	  | Arduino Board
+ -------------+--------------
+ vcc 		  | 3.3 v
+ GND 		  | ground
+ output	      | A0
+ LO+		  | 2
+ LO-		  | 3
+ SDN		  | from controller pin 22
+
+ SD Module:
+ Module 	  | Arduino Board
+ -------------+--------------
+ vcc 		  | 3.3 v
+ GND 	  	  | ground
+ CS		      | 53
+ MOSI	  	  | MOSI = 51
+ MISO	  	  | MISO = 50
+ SCK	  	  | 52
+
+ Liquid Cristal:
+ Name         | Pin
+ -------------+--------------
+ VSS          | Ground
+ VCC          | 5V
+ RS           | 31
+ Enable       | 33
+ R/W          | Ground
+ V0           | Potentiometer
+ D4           | 23
+ D5           | 25
+ D6           | 27
+ D7           | 29
+ LED+         | 5V through a 220 ohm resistor
+ LED-         | Ground
+
+ Buttons:
+ Name         | Pin
+ LEFT         | 6
+ SELECT       | 5
+ RIGHT        | 4
+
+
+ Transistor Controller:
+ ...
