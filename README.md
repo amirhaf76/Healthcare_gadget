@@ -1,4 +1,3 @@
 # Healthcare gadget
 
-This is a program to controlling a device for gathering health care information
-like body temperature, heart beat rate, echocardiography and so on.
+This project involved the implementation of an integrated system for collecting medical data using multiple sensors, such as temperature sensors, heart rate sensors, blood oxygen sensors, echocardiography and more, managed via a microcontroller. The collected data is ultimately sent to a database to create individual health records.
